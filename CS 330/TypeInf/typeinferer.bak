@@ -1,0 +1,397 @@
+#lang plai
+
+;;-----------------------  TEMPLATE   ----------------------
+
+(define-type Expr
+  [num (n number?)]
+  [id (v symbol?)]
+  [bool (b boolean?)]
+  [bin-num-op (op procedure?) (lhs Expr?) (rhs Expr?)]
+  [iszero (e Expr?)]
+  [bif (test Expr?) (then Expr?) (else Expr?)]
+  [with (bound-id symbol?) (bound-body Expr?) (body Expr?)]
+  [rec-with (bound-id symbol?) (bound-body Expr?) (body Expr?)]
+  [fun (arg-id symbol?) (body Expr?)]
+  [app (fun-expr Expr?) (arg-expr Expr?)]
+  [tempty]
+  [tcons (first Expr?) (rest Expr?)]
+  [tfirst (e Expr?)]
+  [trest (e Expr?)]
+  [istempty (e Expr?)])
+
+(define-type Type
+  [t-num]
+  [t-bool]
+  [t-list (elem Type?)]
+  [t-fun (arg Type?) (result Type?)]
+  [t-var (v symbol?)])
+
+(define-type Constraint
+  [eqc (lhs Type?) (rhs Type?)])
+
+;;-------------------  TEMPLATE  -----------------------
+
+
+;;---------------------SUPPORT CODE-------------------------
+; type=?/mapping : hash hash Type Type -> Bool
+; determines if types are equal modulo renaming
+(define (type=?/mapping ht1 ht2 t1 t2)
+  (define (teq? t1 t2)
+    (type=?/mapping ht1 ht2 t1 t2))
+  (cond
+    [(and (t-num? t1) (t-num? t2)) true]
+    [(and (t-bool? t1) (t-bool? t2)) true]
+    [(and (t-list? t1) (t-list? t2))
+     (teq? (t-list-elem t1) (t-list-elem t2))]
+    [(and (t-fun? t1) (t-fun? t2))
+     (and (teq? (t-fun-arg t1) (t-fun-arg t2))
+          (teq? (t-fun-result t1) (t-fun-result t2)))]
+    [(and (t-var? t1) (t-var? t2))
+     (local ([define v1 ; the symbol that ht1 says that t1 maps to
+               (hash-ref
+                ht1 (t-var-v t1)
+                (lambda ()
+                  ; if t1 doesn't map to anything, it's the first
+                  ; time we're seeing it, so map it to t2
+                  (hash-set! ht1 (t-var-v t1) (t-var-v t2))
+                  (t-var-v t2)))]
+             [define v2
+               (hash-ref
+                ht2 (t-var-v t2)
+                (lambda ()
+                  (hash-set! ht2 (t-var-v t2) (t-var-v t1))
+                  (t-var-v t1)))])
+       ; we have to check both mappings, so that distinct variables
+       ; are kept distinct. i.e. a -> b should not be isomorphic to
+       ; c -> c under the one-way mapping a => c, b => c.
+       (and (symbol=? (t-var-v t2) v1)
+            (symbol=? (t-var-v t1) v2)))]
+    [(and (Type? t1) (Type? t2)) false]
+    [else (error 'type=? "either ~a or ~a is not a Type" t1 t2)]))
+
+; type=? Type -> Type -> Bool
+; signals an error if arguments are not variants of Type
+(define ((type=? t1) t2)
+  (or (type=?/mapping (make-hash) (make-hash) t1 t2)
+      ; Unfortunately, test/pred simply prints false;
+      ; this helps us see what t2 was.
+      (error 'type=?
+             "~s and ~a are not equal (modulo renaming)"
+             t1 t2)))
+
+(test/pred (t-var 'a)
+           (type=? (t-var 'b)))
+(test/pred (t-fun (t-var 'a) (t-var 'b))
+           (type=? (t-fun (t-var (gensym)) (t-var (gensym)))))
+(test/pred (t-fun (t-var 'a) (t-var 'b))
+           (type=? (t-fun (t-var (gensym)) (t-var (gensym)))))
+(test/pred (t-fun (t-var 'a) (t-var 'a)) ; fails
+           (type=? (t-fun (t-var (gensym)) (t-var (gensym)))))
+(test/pred (t-fun (t-var 'a) (t-var 'b)) ; fails
+           (type=? (t-fun (t-var 'c) (t-var 'c))))
+(test/exn ((type=? 34) 34) "not a Type")
+
+; constraint-list=? : Constraint list -> Constraint list -> Bool
+; signals an error if arguments are not variants of Constraint
+(define ((constraint-list=? lc1) lc2)
+  (define htlc1 (make-hash))
+  (define htlc2 (make-hash))
+  (or (andmap (lambda (c1 c2)
+                (and
+                 (type=?/mapping
+                  htlc1 htlc2
+                  (eqc-lhs c1) (eqc-lhs c2))
+                 (type=?/mapping
+                  htlc1 htlc2
+                  (eqc-rhs c1) (eqc-rhs c2))))
+              lc1 lc2)
+      (error 'constraint-list=?
+             "~s and ~a are not equal (modulo renaming)"
+             lc1 lc2)))
+
+;;-----------------------/SUPPORT CODE----------------------
+
+;;----------------------   PARSER  -------------------------
+;;CONTRACT (parse se) → Expr?
+;se : s-expression?
+
+;;PURPOSE Parses expressions from the grammar.
+
+;;DEFINITION
+
+(define bad-list 
+  (list 'false 'true #t #f 't-bool 
+        't-nlist 't-num 't-fun 'app 
+        'with 'nempty 'iszero 'bif
+        'bool 'num 'id 'ncons 'nfirst
+        'nrest 'fun 'boolean
+        'bin-num-op 'isnempty 'nempty?
+        ))
+
+(define op-table
+  (list (list '+ +)
+        (list '- -)
+        (list '* *)
+        )
+  )
+
+
+(define (lookup-op op)
+  (if(assoc op op-table)
+     (second (assoc op op-table))
+     false)
+  )
+
+
+(define (parse-type val)
+  (cond
+    [(equal? 'number val) (t-num)]
+    [(equal? 'boolean val) (t-bool)]
+    [(equal? 'nlist val) (t-list)]
+    [(and 
+      (list? val) 
+      (equal? (length val) 3)
+      (equal? (second val) '->))
+     
+     (parse-type (first val))
+     (parse-type (third val))]
+    [else
+     (error "Invalid token")]
+    )
+  )
+
+(define (parse sexp)
+  (cond
+    
+    ;number
+    [(number? sexp) (num sexp)]
+    
+    ;id
+    [(and (symbol? sexp)
+          (not (member sexp bad-list)))
+     
+     (id sexp)]
+    
+    ;boolean
+    [(equal? sexp 'true)
+     (bool #t)]
+    [(equal? sexp 'false)
+     (bool #f)] 
+    
+    ;nempty
+    [(equal? sexp 'nempty)
+     
+     (tempty)]
+    
+    [(list? sexp)
+     (cond 
+       
+       ;iszero
+       [(and (equal? (length sexp) 2)
+             (equal? (first sexp) 'iszero))
+        
+        (iszero (parse (second sexp)))]
+       
+       ;with
+       [(and (equal? (first sexp) 'with)
+             (equal? (length sexp) 3)
+             (list? (second sexp))
+             (symbol? (first(second sexp)))
+             (not (member (first (second sexp)) bad-list))
+             (equal? (length (second sexp)) 2))        
+        
+        (with (first (second sexp))
+              (parse (second (second sexp)))
+              (parse (third sexp)))]
+       
+       [(and (equal? (first sexp) 'rec)
+             (equal? (length sexp) 3)
+             (list? (second sexp))
+             (symbol? (first (second)))
+             (not (member (first (second sexp)) bad-list))
+             (equal? (length (second sexp)) 2))
+        
+        (rec (first (second sexp))
+          (parse (second (second sexp)))
+          (parse (third sexp)))]
+        
+        ;;bif
+        [(and (equal? (first sexp) 'bif)
+              (equal? (length sexp) 4))
+         
+         (bif 
+          (parse (second sexp))
+          (parse (third sexp))
+          (parse (fourth sexp)))]
+        
+        ;fun
+        [(and (equal? (length sexp) 3)
+              (list? (second sexp))
+              (equal? (length (second sexp)) 1)
+              (symbol?(first (second sexp)))
+              (not (member (first (second sexp)) bad-list))
+              (equal? (first sexp) 'fun))
+         
+         (fun
+          (first (second sexp))
+          (parse (third sexp)))]
+        
+        ;ncons
+        [(and (equal? (first sexp) 'tcons)
+              (equal? (length sexp) 3))
+         
+         (tcons (parse (second sexp))
+                (parse (third sexp)))]
+        
+        ;nempty
+        [(and (equal? (first sexp) 'tempty?)
+              (equal? (length sexp) 2))
+         
+         (istempty (parse (second sexp)))]
+        
+        ;nfirst
+        [(and (equal? (first sexp) 'tfirst)
+              (equal? (length sexp) 2))
+         
+         (tfirst (parse (second sexp)))]
+        
+        ;nrest
+        [(and (equal? (first sexp) 'trest)
+              (equal? (length sexp) 2))
+         
+         (trest (parse (second sexp)))]
+        
+        [(id? (first sexp)) (id)]
+        
+        ;app
+        [(equal? (length sexp) 2)
+         
+         (app (parse (first sexp))
+              (parse (second sexp)))]
+        
+        ;binop
+        [else (cond
+                [(lookup-op (first sexp)) 
+                 (bin-num-op (lookup-op (first sexp)) 
+                             (parse (second sexp))
+                             (parse (third sexp)))]
+                [else (error "unrecognized symbol")]
+                )
+              ]
+        )
+]
+[else (error "Illegal syntax")]
+)
+)
+
+;;-------------------  /PARSER  -----------------------
+
+;;-----------------   Alpha Very ----------------------
+
+(define-type alpha-Env
+  [mtanv]
+  [anv (bound-id symbol?)
+       (bound-value symbol?)
+       (type-env alpha-Env?)])
+
+;;CONTRACT (alpha-vary e) → Expr?
+;e : Expr?
+;;PURPOSE Renames all the identifiers in e to new unique identifier, 
+;such that the same identifier is never used twice.
+
+;;DEFINITION
+(define (alpha-vary e)
+  (define hash (hash-set! hash key v))
+  (alpha-vary* e (mtanv))
+  )
+
+(define (alpha-vary* e anv)
+  (type-case Expr e
+    [num (n) e];check
+    
+    [id  (n) e];check
+    
+    [bool (n) e];check
+    
+    [bin-num-op (proc l r) 
+                (begin 
+                  (define environment (anv id (alpha-vary* e anv) anv))
+                  (alpha-vary* (second e environment))
+                  (alpha-vary* (third e environment))
+                  )
+                ]
+    
+    [with  (id val body) (type-of* body (nenv id (type-of* val env) env))]
+    [else 2]
+    )
+  
+  )
+
+;(alpha-very (parse '(+ (with (x 4) x) (with (x 5) x))))
+;--> (bin-num-op #<procedure:+> 
+;(with 'x (num 4) (id 'x)) (with 'x (num 5) (id 'x)))
+
+;(parse '(+ (with (x1 4) x1) (with (x2 5) x2)))
+;-->(bin-num-op #<procedure:+> 
+;(with 'x1 (num 4) (id 'x1)) (with 'x2 (num 5) (id 'x2)))
+
+;(alpha-vary (parse '(with (x 5) y))) --> "error"
+
+
+;;-----------------   /Alpha Very ---------------------
+
+;;-------------  generate-constrains ------------------
+;;CONTRACT (generate-constraints e-id e) → (listof Constraint?)
+;e-id : symbol?
+;e : Expr?
+
+;;PURPOSE Returns the constraints generated by e. e-id serves
+;  as e’s label in this list.
+
+;;DEFINITION
+
+(define (generate-constraints e-id e)
+  2
+  )
+
+;;-------------  /generate-constrains -----------------
+
+;;-------------         Unify        ------------------
+;;CONTRACT (unify loc) → (listof Constraint?)
+;loc : (listof Constraint?)
+
+;;PURPOSE Implements the unification algorithm from class. 
+;The list of constraints that is returned should only have t-vars on the left.
+
+;DEFINITION
+(define (unify loc)
+  ;;
+  2
+  )
+
+;;-------------         /Unify        -----------------
+
+;;-----------------  Type Inferer  --------------------
+;;CONTRACT (infer-type e) → Type?
+;e : Expr?
+;;PURPOSE This should alpha-vary e, generate-constraints on it, run the unify 
+;algorithm, and finally extract the type from the substitution returned by unify
+
+;;DEFINITION
+
+(define (infer-type e)
+  2
+  )
+
+;;----------------  /Type Inferer  --------------------
+
+;;-----------------    TESTS     ----------------------
+
+(define add1-fun '(fun (x) (+ x 1)))
+
+(test/pred (infer-type (parse add1-fun))
+           (type=? (t-fun (t-num) (t-num))))
+(test/pred (infer-type (parse `(,add1-fun 1))) (type=? (t-num)))
+(test/exn (infer-type (parse `(,add1-fun false))) "unify")
+
+;;-----------------   /TESTS     ----------------------

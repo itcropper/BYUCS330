@@ -1,0 +1,99 @@
+#lang plai
+
+(print-only-errors) 
+
+(define-type Binding
+  [binding (name symbol?) (named-expr WAE?)])
+
+(define-type WAE
+  [num (n number?)]
+  [add (lhs WAE?) (rhs WAE?)]
+  [sub (lhs WAE?) (rhs WAE?)]
+  [with (b Binding?) (dony WAE?)]
+  [id (name symbol?)]
+  )
+
+
+;CONTRACT: (parse s-exp) -> WAE?
+;PURPOSE: parses s-exp int a WAE according to the grammar:
+;    WAE	 	=	 	number
+; 	 	|	 	(+ WAE WAE)
+; 	 	|	 	(- WAE WAE)
+; 	 	|	 	(with ([id WAE]) WAE)
+; 	 	|	 	id
+;
+;where number is a Racket number and id is not '+, '-, or 'with.
+
+;DEFINITION:
+
+(define (parse sexp)
+  (cond
+    [(number? sexp) (num sexp)]
+    [(list? sexp)
+     (if (< 3 (length sexp))
+         (error parse '(+ 1 2 3) "More than two arguments")
+         (case (first sexp)
+           [(+) (add (parse (second sexp))
+                     (parse (third sexp)))]
+           [(-) (sub (parse (second sexp))
+                     (parse (third sexp)))]
+           [else (error "Not a list of bindings")]
+           
+           )
+         )
+     ]
+    [else (error "Illegal syntax")]
+    )
+  )
+
+
+(test (parse '5) (num 5))
+(test/exn (parse true) "Illegal syntax")
+(test (parse '(+ 1 2)) (add (num 1) (num 2)))
+(test/exn (parse '(+ 1 2 3)) "More than two arguments")
+(test/exn (parse '(with [x 1] x)) "Not a list of bindings")
+
+
+;----------------------------------------------------------------------------------------
+
+;CONTRACT: (calc e) → number?
+;  e : WAE?
+
+;PURPOSE:Consumes a WAE representation of an 
+;expression and computes the corresponding numerical result.
+
+;DEFINITION
+
+
+(define (calc expr)
+  (type-case WAE expr
+    [num (n) n]
+    [add (l r) (+ (calc l) (calc r))]
+    [sub (l r) (- (calc l) (calc r))]
+    [with (  bound-body)
+          (calc (subst bound-body
+                       bound-id
+                       (num (calc named-expr))))]
+    [id (v) (error ’calc ”free identiﬁer”)])
+  )
+
+
+(define (subst expr sub-id val)
+  (type-case WAE expr
+    [num (n) expr]
+    [add (l r) (add (subst l sub-id val)
+                    (subst r sub-id val))]
+    [sub (l r) (sub (subst l sub-id val)
+                    (subst r sub-id val))]
+    [with (bound-id named-expr bound-body)
+          (if (symbol=? bound-id sub-id)
+              expr
+              (with bound-id22 CHAPTER 3. SUBSTITUTION
+                    (subst named-expr sub-id val)
+                    (subst bound-body sub-id val)))]
+    [id (v) (if (symbol=? v sub-id) val expr)])
+  )
+
+(test (calc (parse '5)) 5)
+(test (calc (parse '(+ 4 1))) 5)
+(test (calc (parse '(with ([x 5]) x))) 5)

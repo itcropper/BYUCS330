@@ -1,0 +1,222 @@
+Garbage collection is an idea that has been discussed for decades, and is 
+still in debate over what the best processes and best practices are. The 
+overall idea is that when you create a program, you allocate memory. Objects 
+that get stored on the stack are little to worry about since the stack is so 
+short-lived anyway, memory that is used there will soon be freed. However, 
+things get a little trickier when you start using the heap. The heap is 
+another section of a computer's memory. It is often used when a programmer 
+calls "new". Since the computer has no way of automatically freeing heap 
+memory that has been allocated for objects, it can very quickly turn into a 
+bad situation. Obviously for one thing, you can run out of memory or leave 
+bits of memory that have been allocated for something with nothing to tell the 
+computer that that piece of memory can be used to something else. So for the 
+duration of the program's life cycle, that memory cannot be used again (this 
+is also known as having memory leaks). The most notorious example of this is 
+the Mozilla Firefox browser. Now granted, it is a hard thing for they 
+themselves to always control since they allow for third party add-ons, but 
+gradually, the browser would get slower and slower until the user would 
+finally notice it. For the more technologically savvy, this was simply 
+unacceptable. When first learning about memory management and garbage 
+collection, Firefox was the first answer I got to the question "why is this 
+useful?" There are several different ways to handle memory and make sure that 
+your program has a small memory footprint on your computer. I will be talking 
+about a few of these.
+
+Perhaps the most commonly known (especially among the lesser experienced 
+programmers) is manual memory management. In C++ for example, an object can be 
+placed on the heap with the key word "new". This is used when you are creating 
+a new instantiation of an object. To do this, you call that object's 
+constructor which then allows you access to that object's operations and 
+members. Now there is also a destructor (marked by the '~') which is 
+essentially the opposite of what using the word "new" does-it frees that memory
+. Now before going on it's important to remember that when talking about 
+memory management, memory doesn’t actually get deleted. The information that 
+was there before the destructor's call is the same information that is there 
+after the destructor is called. The difference is that the computer now knows 
+that that specific piece of memory is available to be overwritten. It's only 
+when THAT happens that the information stored at that memory location is lost (
+this opens the door to some interesting topics about digital forensics that we 
+won’t go into).
+
+A very simple naive way of manual memory management is to start your program, 
+create everything that you need, then right before the program finishes, you 
+call your destructor that can branch out and call all of the destructors of 
+the objects that it stored on the heap. You make sure to iterate through your 
+lists, and trees, calling all of the node's destructors and so on. The bad 
+thing with this is that it still doesn't protect from running out of memory 
+mid program even when a lot of its objects are no longer in use. 
+
+The advantage to handling memory manually is that it is very simple for 
+armature programmers to implement. It is intuitive and doesn't involve a whole 
+lot which is why it is likely the first contact programmers have with memory 
+management.
+
+The next system to talk about is perhaps best known method of memory 
+management: reference counting. Here's the basic idea. An object, on top of 
+storing its member objects will also store some integer that gets incremented 
+when another object references it. So for example, if I had some object 
+element, and in that object, I call Unit * unit = new Unit(), then unit has a 
+reference to it from element, and the unit reference counter is incremented 
+from 0 to 1. In contrast, when something stops referencing an object, that 
+object decrements its reference counter. Once that counter gets to 0, the 
+object is deleted (memory freed) and all of the objects that were referenced 
+by our recently freed object have their reference counters decremented. Keep 
+in mind that if object A references object B which references object C, and we 
+free object B, the memory for object C will only be freed if C's reference 
+counter was decremented to 0.
+
+Now that we know the basic idea, we can talk about why we like it. The main 
+advantage of reference counting, or tracing garbage collection, is that 
+objects are reclaimed as soon as they can no longer be referenced, and in an 
+one-step-at-a-time fashion, without long pauses for collection cycles. This is 
+especially useful for programs with long running times, or that run 
+indefinitely. Unlike the naive process of manual memory management, reference 
+counting will free memory while the process is running if objects are no 
+longer needed.[wiki-ref] This helps applications to continue to maintain their 
+responsiveness throughout their lifecycle.
+
+Finally, why we hate it. As good as reference counting sounds, it runs into 
+some serious trouble. I'll explain it in a use case. What happens if object A 
+references object B, which references object C, and then object C carries a 
+reference to object A! This means that object A is indirectly referencing 
+itself. You can imagine that this will cause problems. A mechanism relying 
+purely on reference counts will never consider cyclic chains of objects for 
+deletion, since their reference count is guaranteed to stay nonzero.[wiki-ref] 
+Another issue to consider if you implement pure reference counting, is that 
+for every object, you also need to store an integer on top of all of the 
+object’s members. Depending on your program, if memory is something that 
+you’re really strapped for, you may need to consider something else.
+
+Onto the next process for collecting garbage: mark and sweep. Mark and sweep 
+is sometimes called "trace garbage collection" because of its recursive nature.
+The idea behind mark and sweep is when a program has exceeded its memory 
+thresh hold, to get a root memory location and do a traversal to referencing 
+memory locations, marking locations that it's been to. At the end of its 
+traversal, whatever has not been marked (and is therefore no longer in use) is 
+freed. 
+
+Because the mark-and-sweep garbage collection algorithm traces out the set of 
+objects accessible from the root memory locations, it is able to correctly 
+identify and collect garbage even in the presence of reference cycles. This is 
+the main advantage of mark-and-sweep over the reference counting technique 
+presented in the preceding section. A secondary benefit of the mark-and-sweep 
+approach is that the normal manipulations of reference variables incurs little 
+overhead.[brpreiss] Instead of storing an integer for each object on the heap (
+memory expensive), we only have to worry about one bit per object. A simple 
+Boolean will be assigned to all things in memory. Then if it can be reached, 
+it flips that Boolean signifying that object is still in use and is freed. 
+This makes mark and sweep your best option if you are really trying to 
+mitigate your memory foot print.
+
+The biggest reason that we don't like mark and sweep is the fact that it is a 
+sequential process. With reference counting, as soon as an object was changed, 
+that change was reflected in the count of the referring objects. However, with 
+mark and sweep, the collector will run through the whole of memory and collect 
+and garbage. For programs in which there is a lot of user interaction, this 
+can be a real issue because it means that the program will temporarily freeze 
+as it goes through the process of marking and sweeping. This gets to be an 
+even bigger issue when the amount of memory allocated exceeds the cache and 
+ram, so the system temporarily stores things on the hard-drive (a process 
+called 'paging'). If this were the case, then mark and sweep would have to get 
+each page from the hard-drive and check if the objects stored there are still 
+in use. Perhaps it wouldn't take long, but to the system, it is glacially 
+slower than other processes.
+
+The other distinctive characteristic of mark and sweep compared to reference 
+counting is memory sticking around until the program is run. In reference 
+counting, as soon as memory becomes garbage, it is freed. Whereas with mark 
+and sweep, the process must actually be called, and THEN the memory will be 
+collected as garbage. There are a few ideas behind when the mark and sweep 
+process should be run. Obviously, if you wait to run it until to the point 
+where memory allocation fails, then it is very likely that garbage collection (
+in just about any form) will fail as well, so it has to be run before then. 
+Some of the ways for determining when to run the program include when the 
+system is low, but not out of memory, when the memory has become very 
+fragmented with low continuity, or maybe even after a large piece of memory 
+has been recently stored or freed.[msdn] This opens several new doors because 
+obviously there is a balance between running it rarely compared to often. The 
+more it is run, the less memory there is to fee. So even though it would halt 
+the process of the program running, if you were to tune mark and sweep to the 
+most optimum point of collection (in terms of frequency run) then it might 
+make sense to use anyway. The important thing to remember is that mark and 
+sweep is a process that must be called, and not something that will handle 
+memory autonomously.
+
+Stop and copy is the last form of collection we will discuss. The idea behind 
+stop and copy is to split the system's free memory in half, allocate one half 
+as an idle section, and the other half as the 'in use' or 'live' section. When 
+stop and copy is run, it copies all of the objects from the live section into 
+the idle section. As each object is copied, its references are changed to 
+reflect the new location. When the copying is complete, the roles of the two 
+memory halves are swapped--live becomes idle and idle becomes live--and 
+whatever is left in the new idle section are objects that are no longer live 
+and that storage is reclaimed as free memory.
+
+Initially, you may see the obvious elephant in the room and ask "why on earth 
+would you want to double the amount of memory you use on top of taking the 
+time to copy almost every single object?" Well there are some significant 
+advantages to stop and copy that are not available to the previously mentioned 
+garbage collectors. The most notable being that by using stop and copy, you 
+are in essence defragmenting your memory space.[c2] It does this by copying 
+objects and storing those copies in contiguous memory locations. This is 
+something that neither reference counting nor mark and sweep do because there 
+is no process to deal with memory as a whole in those two.
+
+Going back to the elephant in the room, stop and copy is expensive. It takes a 
+lot of memory to copy all of the live objects from one space of memory to the 
+next. The copy operation itself is only O(1), but it’s the space that’s 
+concerning about this. Sometimes it can still be worth it though. For example, 
+if your program uses the heap a lot, but the objects put onto the heap are 
+very short lived and don’t stick around for very long, then stop and copy 
+might not add a whole lot of overhead since the process wouldn't have to worry 
+about copying very much. However, if your program has a lot objects that are 
+very long lived and stick around for a longer amount of time, then stop and 
+copy will be running a lot of operations and the only advantage you’re left 
+with is a defragged heap.
+
+The Java language serves as a great example for some real world application. 
+Java is probably the first language that many programmers would think of when 
+they hear the phrase "garbage collection". Over the years, it has developed 
+into an impressive system. Java implements a multigenerational garbage 
+collection. It splits up memory into three spaces called "young generation", 
+"old generation", and "perm". Young generation is further split up into three 
+more spaces called "Eden space", "survivor1", and "survivor2". When an object 
+is initially created, it goes into the Eden space where if it survives minor 
+garbage collection, it will be moved to survivor1. If it survives the more 
+extensive garbage collection there, it will be moved to survivor2, and again 
+into the old generation space.[revisited] This is somewhat of an optimization 
+from the stop and copy technique, but instead of having two partitions in 
+memory, we have three. It uses the same idea of applying a test to pieces of 
+memory in Java, if an object is not referenced or reachable from another piece 
+of memory, or if it is part of a cycle that is not reachable from other 
+memory, then it is eligible for garbage collection and will not be advanced to 
+the next partition of memory. One serious advantage of Java's garbage 
+collector is that it runs on a separate thread that is run concurrently with 
+the application. So even if Java has to collect garbage and free space, as 
+long as it completes the swapping to the next generation of memory before 
+those objects are needed, it will not cause latency in the application.
+
+Java gets a bad rap for a lot of things, but garbage collection is one thing 
+that it got right. It does such a good job because it (among other things) it 
+isn't just sticking to a single method of garbage collection, nor is it 
+treating the above mention methods as immutable. For example, rather than 
+having two partitions of memory and doing a stop and copy, Java has several. 
+There is constantly more research being done in the field of garbage 
+collection to find better ways of doing what Java does. We've seen a real life 
+example of what can happen with a poor or absent garbage collector, and so we 
+can see that it is important to understand the process when developing 
+programming languages, writing applications, or even using applications. 
+Garbage collection allows us to use the programs that we do without having to 
+save, exit, and restart, and thank heavens for that.
+
+
+References : 
+
+[wiki]       http://en.wikipedia.org/wiki/Reference_counting
+[msdn]       http://blogs.msdn.com/b/abhinaba/archive/2009/01/30/back-to-basics
+-mark-and-sweep-garbage-collection.aspx
+[c2]         http://c2.com/cgi/wiki?StopAndCopy
+
+[brpreiss]   http://www.brpreiss.com/books/opus5/html/page424.html
+[revisited]  http://javarevisited.blogspot.com/2011/04/garbage-collection-in-
+java.html

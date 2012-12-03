@@ -1,0 +1,398 @@
+Ian Cropper
+Language Analysis: JavaScript
+
+Where did JavaScript come from?
+
+JavaScript was created in the early part of 1995; a time when anything 
+internet related could explode almost instantly. Despite its ingenious design, 
+however, it didn't see the initial success that many today would wonder about. 
+Brenden Eich was hired by Netscape in that same year and was given the task of 
+making Netscape Navigator's newly added Java support easier to use and more 
+accessible by the public. 1995 was also the year that Java was first released 
+by Sun Microsystems, and it quickly gained public support and buzz, so 
+naturally, Netscape wanted an option for it in their browser.[1]
+
+In a short time, rather than building something that would work seamlessly in 
+the browser with Java, Brenden decided that a scripting language would be a 
+much better option. Its first release was originally called "LiveScript" in 
+an effort to showcase how dynamic it was, but it wasn’t long before Netscape 
+marketing renamed it to "JavaScript".[3] In an effort to ride the buzzing wave 
+caused by the quick rise in popularity of Java, Netscape marketing single
+-handedly created one of the greatest misconceptions in modern programming.
+
+JavaScript also grew quickly in popularity. Since JavaScript could be written 
+directly into html pages, and loaded in the browser, inexperienced 
+programmers could easily create dynamic content. For programmers that had been 
+in the industry for a while, this seemed threatening, and ultimately led to 
+many of them labeling JavaScript as an unserious, toy-like language. This 
+didn't stop the growth or success or the language though. It continued to gain 
+popularity, particularly in the up-and-coming tech/internet scene.
+
+In between 1995 and present, Netscape was purchased by Time Warner (owner of 
+AOL). Time Warner didn’t maintain the level of innovation that Netscape 
+originally held, and the company is now nothing more than a ghost for today’s 
+generation. Because of that though, JavaScript has no real owner; making it 
+somewhat of a public good. Excellent in that it is available to everyone, but 
+not quite so good since there is no longer a single entity to act as a strong 
+driver for innovation and further development.[2] However, this has happened 
+with several languages and technologies, and they seem to have turned out fine 
+(Linux, Apache, PHP, MySQL, ... etc.).
+
+-syntax
+
+Though JavaScript is very different from a typical object oriented language, 
+it still bears a resemblance to some of the more common object oriented 
+languages. Brendan Eich summarized the ancestry of the syntax in the first 
+paragraph of the JavaScript 1.1 specification as follows: "JavaScript borrows 
+most of its syntax from Java, but also inherits from Awk and Perl, with some 
+indirect influence from Self in its object prototype system."[4] There are 
+however, some very clear differences. Since most are already familiar with 
+object oriented language syntax, I will focus my attention to the differences 
+rather than the similarities.
+
+To start, JavaScript supports what are called "variadic functions". A variadic 
+function can accept an indefinite number of arguments as 
+parameters. For example, the following is an instance of a variadic function (
+curly brackets omitted for the sake of space).
+
+var sum = function()
+    var i, x = 0;
+    for (i = 0; i < arguments.length; ++i) 
+        x += arguments[i];
+    return x;
+
+By using the special variable "arguments", you can access elements passed to 
+function as you would an array.[9] An example would be sum(1, 2, 3, 4); in 
+which case, after iterating through the array of arguments, sum() would 
+return 10. This is the same type of behavior that Perl uses with its "shift" 
+operator. Only shift auto-increments the argument array index, in JavaScript, 
+that action needs to be done manually.
+
+Another interesting difference is a technique called "semicolon insertion". 
+Typically in a language like Java, C, or C++, whitespace outside of string 
+constants are irrelevant. In JavaScript, however, whitespace can have a direct 
+impact on how a program will run. The following code illustrates what 
+semicolon insertion actually does. The statement
+
+	return
+	a + b;
+
+would normally throw a compiler error in most other languages, but in 
+JavaScript, it is simply treated as:
+
+	return;
+	a + b;
+
+The semicolon was automatically placed at the end of the return statement. For 
+most people, this is actually controversial since it is contrary to typical 
+programming, especially in a language that bares so much resemblance to a C 
+based language, where semicolons are so important. It is important to remember 
+that this is one example of semicolon use, and when it comes to semicolons, 
+JavaScript treats them very differently than what is normal.
+
+	;;;;;
+
+Is a valid line of code in JavaScript and represents five distinct, legal 
+statements known as "empty statements".[10]
+
+The last syntactic difference that we'll talk about is the fancy "equality 
+without type coercion" operator. In other words, two values have to be 
+identical in order to return true. In code, the difference would be 
+"0 == false" returns true, since "0" and "false" are regaurded as the same in 
+boolean logic. However, "0 === false" would return false because "0" is an 
+integer representing nothing, and "false" is a Boolean. The equality without 
+type coercion operator considers both value and type, similar to a mix of 
+'instanceof' and ‘==’ operator in Java .
+
+--Variables
+
+JavaScript is what’s known as a "weak" or "loosely typed" language. This is 
+where it gets some of its similarities from Perl or Python. This has several 
+meanings, but the most common one is that variables are not given explicit 
+types. Whether you are dealing with a type string, double, int, or even lists, 
+they are all declared the same way.
+
+	var variable = someArbitraryType;
+
+This requires less effort on the part of the programmer, since the compiler 
+makes the conversions implicitly. However, this can often times come back to 
+haunt the programmer if they aren't careful, especially since JavaScript can 
+sometimes behave strangely. For example, consider the following code and its 
+output.
+
+	>> var ar = Array(16);
+	<< undefined
+	>> ar.join("jay");
+	<< "jayjayjayjayjayjayjayjayjayjayjayjayjayjayjay"
+
+Other than the strange "undefined" output, it's not too hard to follow the 
+"jay", 16 times. If we keep going, we'll see how JavaScript handles mismatched 
+types.
+
+	>> ar.join("jay" + 1);
+	<< "jay1jay1jay1jay1jay1jay1jay1jay1jay1jay1jay1jay1jay1jay1jay1"
+
+In a stronger typed language like Java or C++, this would have created 
+something along the lines of a type conversion error saying "you cannot add 
+Strings to Integers". JavaScript however doesn't have a problem with that and 
+just treats it as a concatenation. This is a very strange and unusual quirk 
+that JavaScript has. It gets stranger when using other operators. For example, 
+let’s use the same code but use subtraction rather than addition.
+
+	>> ar.join("jay" - 1) + " Batman!";
+	<< "NaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaNNaN Batman!"
+
+The return value of "NaN" stands for "Not a Number". To which we might say 
+"neither was the result of 'jay' + 1" or "we didn't want a number anyway". 
+This is an instance of inconsistency in the JavaScript compiler, and one of 
+the few cases where 2 + "2" does not equal four (it's "22"). It's a good 
+demonstration of how weak typing works in JavaScript though. Without explicit 
+definitions of types in the actual code, it's easy to make mistakes and 
+combine different types of data that shouldn’t be combined. That’s not to say 
+that types don't exist in JavaScript, it just doesn't require explicit type 
+declarations, and the compiler will decide what types each variable is based 
+on its literal or evaluated assignment. 
+
+Another allowance that JavaScript makes for the programmer is what’s called  
+"lexical scoping". Once a variable is declared it may be accessed anywhere 
+inside the function where it is declared, even before the declaration appears. 
+In effect, variable declarations are hoisted or lifted to the top of the 
+enclosing function. [4] Variables that haven’t been initialized yet will still 
+be undefined, but once defined, any portion of the scope can access them.
+
+Prototype-based programming
+
+A distinctive characteristic that JavaScript has separating itself from 
+its namesake is how it implements Object-Oriented programming. Java is what is 
+known as a class based language. JavaScript on the other hand is known as a 
+prototype-based programming language. Prototype-based programming excludes 
+classes from its architecture, hence you will never see a constructor method 
+in JavaScript. In order to gain access to functions or collections of data 
+that require reuse, JavaScript allows it through inheritance, or cloning, both 
+of which are well defined throughout most common programming languages. In 
+order to create new objects in JavaScript, there are two options: cloning (as 
+mentioned before) or "from nothing" Sometimes called “ex nilho”). Cloning an 
+object does what it sounds like by taking all of the data and behavior of one 
+object and copying it into another. "From nothing" is also intuitive in 
+that it creates an object based off of literal data and method definitions, i.e
+., it has nothing created before it to base its properties off of—it is 
+starting from scratch. Objects can be defined at runtime through special 
+syntax such as {...} and passed directly to a variable. To demonstrate these, 
+if we were to create two variables, "foo" and "bar" we might define them the 
+following way.
+
+	var foo = {name: "foo", one: 1, two: 2};
+	var bar = {three: 3};
+
+Both of these are examples of creating variables "from nothing" because they 
+are literally, created from nothing, and literal data is passed into them. If 
+we wanted to clone "foo" onto "bar", we would do so with the following line of 
+code.
+
+	bar.__proto__ = foo; 
+
+"Foo" is now the prototype of bar which carries with all of the data and 
+behavior (if any were have to been defined) that "foo" did. [11]
+
+By using prototyping, it allows for the alteration of prototypes during 
+runtime, whereas there are only a handful of class-based languages that allow 
+classes to be altered during runtime. If the programmer can make the 
+transition, they will be able to see a lot of the power that comes from 
+prototype-based programming. This "classless" type of programming can be a 
+hard mental shift to make for many programmers that have been trained mostly 
+in languages like Java or C++ because of their inherent "class-based" nature. 
+
+-first-order functions
+
+One incredible capacity that JavaScript allows is first-class functions. This 
+is the ability of a language to treat functions as objects and pass them into 
+other functions. Consider an example. We can create the following function and 
+assign it to a variable.
+
+	var g = function(d){ return d + " - ";};
+
+This function is very simple and does nothing more than accept input and 
+concatenate " - " on the end. As a first-class function language, we can use 
+that function as an argument in other functions (curly brackets omitted for 
+the sake of space).
+
+	each = function (xs, f) 
+	  var i, len, each;
+	  for(i = 0, len = xs.length; i < len; i++) 
+	    f(xs[i]);
+
+If we were to call each(g, Array(16).join("high")), each() would be able to 
+use the function passed to it just as it would use a variable. This is a 
+snippet reduced to its bare bones for the $.each() function from the jQuery 
+library. It is a perfect example of a higher order function because it already 
+makes sense to most people, and even if they have don’t much web programming, 
+it is likely they have used it without even knowing it! The real beauty of 
+higher order functions is that it allows more laziness on the part of the 
+programmer. Rather than copying code, you can write a robust function, and 
+just pass it into another function and apply that code to multiple necessary 
+instances.
+
+A particularly important part of both JavaScript and higher order functions is 
+what’s called a "closure". It can be either a function or a reference to a 
+function that has a referencing environment.[5] Meaning that it keeps track of 
+the non-local variables that it had access to upon creation. This seems to go 
+against legal programming syntax because it's almost as though it defies 
+scoping rules. However, the idea has been around long before JavaScript. It 
+was actually first widely used in the mid 70's as a feature to the 'Scheme' 
+programming language.[5] Since then it has been widely implemented in many 
+languages. It would be really hard to describe without the use of code, so 
+let’s observe the following (curly brackets omitted for the sake of space).
+	
+	function foo(x) 
+	  var tmp = 3;
+	  return function (y) 
+	    alert(x + y + (++tmp));
+	var bar = foo(2);
+	bar(10);
+
+When finally called (last line), the important idea with a closure is 
+that it has access to the non-local variables that were made available to it 
+when it was created--specifically, the variables tmp and x. Now if you’re 
+tempted to ask "what's the point of that?", well on top of the benefits of 
+higher order functions, and having to write even less code because you have 
+access to more data in a closure than just a regular function, closures are 
+also an effective way to hide private data.[6] A closure can be used to bind a 
+function with a set of "private" variables, which remain over multiple calls 
+of the function. So the scope of the variable encompasses only the closed-over 
+function.
+
+Though this does not extend the full capacity that JavaScript has in higher-
+order functions, it represents the equivalence class of the power of higher-
+order functions that JavaScript has available. It ultimately allows the 
+programmer to make better use of less code but letting him/her apply functions 
+to functions rather than just variables to functions. It becomes even more 
+powerful because closures have more than just local variables defined in 
+functions, but also non-local variables.
+
+Paradigm
+
+JavaScript again proves itself as unique because it is a multi-paradigm 
+language. JavaScript can be classified or used for scripting, object-oriented (
+prototype-based), imperative, and functional. Meaning that of the four main 
+times of programming paradigms, JavaScript fits within three of them. A 
+programming paradigm is simply a fundamental style of a programming language. 
+The fourth language paradigm is logic programming. The idea of a multiparadigm 
+language is to provide a framework in which programmers can work in a variety 
+of styles, freely intermixing constructs from different paradigms." The design 
+goal of such languages is to allow programmers to use the best tool for a job, 
+admitting that no one paradigm solves all problems in the easiest or most 
+efficient way.[7] This concept solidifies further the idea that JavaScript is 
+a modern, robust, and very flexible language. So even if the only languages 
+you are familiar with are Perl and Haskell, you can very quickly gain 
+confidence in JavaScript and find practical uses for it.
+
+The final feature important to bring up is JavaScript's dynamic nature. This 
+can be split up into three different aspects: dynamic typing, object based, 
+and run-time evaluation.
+
+Dynamic Typing: 
+As is common in many scripting languages, types in JavaScript are bound to 
+values rather than variables. This is why in a certain stage of a program, var 
+x could be initialized as a string, and then later reset to a number. Since 
+JavaScript is a weakly typed language (as was mentioned before), it is 
+important for it to be able to test types throughout the program. The "type()" 
+function is an example of that. For example, type(101); would return "Number", 
+type([]); would return "Array", type({}); would return "Object", etc. There 
+are many other types in JavaScript, but you can get the idea from those 
+examples and the need to check variable types throughout a program if the 
+programmer is taking advantage of dynamic typing.
+
+Object Based:
+Nearly all objects are elements of arrays in JavaScript. This means that 
+elements of objects can be referenced the same way one would reference 
+elements in arrays, and also that members of objects are iterateable. For 
+example, the following two statements are equivalent.
+
+	obj.x  = yoda.force.stength 	   > luke.force.strength
+	obj[x] = yoda['force']['strength'] > luke['force']['strength']
+
+When using JavaScript though, we normally always use the dot syntax because it 
+is easier to keep track of and more conventional. JavaScript in this case just 
+allows for 'syntactic sugar'.[9]
+
+Run-time evaluation:
+JavaScript has a very interesting feature in that functions can evaluate 
+things based on what is passed to them dynamically. This is exemplified in the 
+following bit of code (curly brackets omitted for the sake of space).
+
+	function evalWithX(expr, a, b)
+	    var x = a; 
+	    var atA = eval(expr);
+	    x = b; 
+	    var atB = eval(expr);
+	    return atB - atA;
+
+    evalWithX('Math.exp(x)', 0, 1); //returns 1.718281...
+
+The "eval()" function does just what it sounds. It returns the result of the 
+last expression evaluated. What makes eval() unique however, is that it uses 
+the environment from the calling function.[9] So in typical programming 
+languages, there is a sequential process where each expression is evaluated 
+based on the information explicitly given to it. However, by using 
+Run-time evaluation, JavaScript allows expressions to be aware of their 
+surroundings when evaluated. In the case of eval(), it is aware of not only 
+the expression before it, (var x = a, or var x = b) but it is always aware of 
+the expression that called its parent.
+
+NodeJS
+
+To cover the full extent of JavaScript, it is important that we talk about Node
+.js. Node.js is a specific implementation of JavaScript that was written 
+rather exclusively for web servers. The extensions was developed in 2009, and 
+has since flourished. Node.js introduced a paradigm shift because for most of 
+its life, JavaScript was a client-side language. Though it's powerful, 
+JavaScript’s main implementations had been interaction with the user, and 
+creating powerful, rich, client-side applications. Node.js, however, 
+introduced JavaScript as a capable server-sided language. It was designed with 
+the purpose of maximizing scalability and minimizing computation time, 
+bandwidth, and memory. Unlike typical JavaScript being run in a browser Node.
+js is written to be compiled and run on a server.
+
+Node.js offers a huge benefit to its users. In the past, before Node.js when 
+PHP or Java were some of the few server-sided languages, connecting to a 
+server was expensive. If a server was running a web application, each time 
+a user wanted to make a connection, the server would have to create a new 
+thread, adding about two MB of memory from a limited amount of RAM. What was 
+the solution? Add more memory! Which means add more servers. For 
+connection heavy web applications that had a lot of traffic, that means a lot 
+of server space and directly corresponds to a lot of extra money.[8] 
+Furthermore, all of the servers may need to be sharing resources which creates 
+a significant bottleneck. Node.js circumvents this issue by altering the way 
+that connections from users are handled on the server. Instead of creating new 
+threads, it is entirely event-driven. Hence it can handle tens of thousands of 
+connections at once. This is ultimately how it reduces overhead. The real 
+value to the specific programmer is that they can write the application in a 
+language with syntax that is already familiar to most programmers, and give 
+them access to high-order functions and closures.
+
+Since its introduction, JavaScript has been one of the most important, 
+popular, and useful technologies to have introduced to the web world. Millions 
+of websites have been built with it because of its easily understood, easily 
+programmed nature. At first glance, it is easy to underestimate the vast power 
+that JavaScript has. Being initially written off by professionals as a toy 
+language, it has proved itself as a capable, advanced language for computation.
+Perhaps its biggest flaw is the fact that it is virtually unrunable outside of 
+a browser, making it impractical for anything other than web use. Node.js 
+however has shown us that JavaScript is also a very capable and practical 
+language for building things with JavaScript not only outside of a browser, 
+but entirely detached from the user. In the coming years as more people become 
+familiar with its deeper capabilities such as higher-order functions and 
+closures, I expect we will see an even greater increase in the use and 
+applicability of JavaScript.
+
+[2]  http://en.wikipedia.org/wiki/Netscape_Navigator
+[3]  http://www.oreillynet.com/pub/a/javascript/2001/04/06/js_history.html
+[1]  http://en.wikipedia.org/wiki/Java_(programming_language)
+[4]  http://en.wikipedia.org/wiki/JavaScript_syntax
+[11] http://en.wikipedia.org/wiki/Prototype-based_programming
+[5]  http://en.wikipedia.org/wiki/Closure_(computer_science)
+[6]  http://nathansjslessons.appspot.com/
+[7]  http://en.wikipedia.org/wiki/Programming_paradigm
+[8]  http://www.ibm.com/developerworks/opensource/library/os-nodejs/index.html
+[9]  http://en.wikipedia.org/wiki/JavaScript
+[10] http://inimino.org/~inimino/blog/javascript_semicolons

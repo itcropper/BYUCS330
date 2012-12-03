@@ -1,0 +1,22 @@
+#lang lazy
+
+(require racket/trace)
+
+(define print-only-errors #f)
+
+(define (test l r)
+  (if (equal? l r)
+      (if print-only-errors
+          ()
+          (printf "Test Passed~n"))
+      (printf "Test Failed.~nActual:   ~S ~nExpected: ~S~n" l r)))
+
+
+(define (build-infinite-list f)
+   (map f natural-nums)
+)
+
+(define natural-nums
+  (cons 0 (map add1 natural-nums))
+)
+

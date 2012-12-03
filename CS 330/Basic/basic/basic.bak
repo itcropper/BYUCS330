@@ -1,0 +1,185 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-beginner-reader.ss" "lang")((modname basic) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f ())))
+;contract:
+;(sum-coins pennies nickels dimes quarters) → number?
+                                                     
+;Purpose:
+; Adds the VALUES of coins together
+
+;Definition
+(define (sum-coins pennies nickles dimes quarters)
+  (+ (* pennies .01) (* nickles 0.05) (* dimes 0.1) (* quarters 0.25)))
+
+;TESTS:
+(check-expect(sum-coins 1 1 1 1) .41)
+(check-expect(sum-coins 1 2 3 4) 1.41)
+
+;----------------------------------------------------
+;CONTRACT:
+;(area-cylinder base-radius height) → number?
+
+;PURPOSE:
+;Takes the Dimensions of an object and returns the volume
+
+;DEFINITION
+(define (area-cylinder base-radius height)
+  (+ ( * ( * 3.14159265 base-radius base-radius) 2) (* 3.14159265 base-radius 2 height)))
+
+;TESTS:
+(check-within(area-cylinder 4 6) 251.327 .01)
+
+;--------------------------------------------------
+;CONTRACT:
+;(tax gross-pay) → number?
+
+;PURPOSE:
+;take in a number and returns the tax owed based on different amounts
+
+;DEFINITION
+(define (tax gross-pay)
+  (cond 
+    [(<= gross-pay 240) 0]
+    [(and (< 240 gross-pay) ( <= gross-pay 480 )) .15]
+    [else .28]
+    ))
+;TESTS
+(check-expect(tax 0) 0)
+(check-expect(tax 240) 0)
+(check-expect(tax 241) .15)
+(check-expect(tax 480) .15)
+(check-expect(tax 481) .28)
+
+;-------------------------------------------
+;CONTRACT
+;(netpay hours-worked) → number?
+
+;PURPOSE:
+;Determines the net pay of an employee based on hours work and a pay of $12
+
+;DEFINE
+(define (netpay hours-worked)
+  (- (* hours-worked 12) (* (tax(* hours-worked 12)) (* hours-worked 12)))
+  )
+;TESTS
+(check-within(netpay 30) 306 .1)
+(check-within(netpay 40) 408 .1) 
+(check-within(netpay 41) 354.24 .1)
+
+;--------------------------------------------------
+;CONTRACT:
+;(what-kind a b c) → symbol?
+
+;PURPOSE:
+;takes in three numbers and determines hown many roots that quadratic
+;equation would have by producing 'one', 'two', 'none' or 'degenerate'
+
+;DEFINITION:
+(define (what-kind a b c)
+  (cond
+    [(= a 0) "degenerate"]
+    [(> 0 (- (* b b) (* 4 a c))) "none"]
+    [(= (* b b) (* 4 a c)) "one"]
+    [else "two"]))
+
+;TESTS
+(check-expect(what-kind 1 2 1) "one")
+(check-expect(what-kind 2 2 4) "none")
+(check-expect(what-kind 1 3 2) "two")
+
+;-----------------------------------------------------
+;CONTRACT
+;(struct time (hours minutes seconds) #:extra-constructor-name make-time)
+
+;PURPOSE
+;defines points in time since midnight using define-struct
+
+;DEFINITION
+(define-struct time(hours minutes seconds))
+;CONTRACT:
+;(time-diff t1 t2) → number?
+
+;PURPOSE
+;return a number on seconds from a beginning and end time
+
+;DEFINITION:
+(define (time-diff t1 t2)
+  (- 
+   (+ (* (time-hours t2) 60 60) (* (time-minutes t2) 60 ) (time-seconds t2))
+   (+ (* (time-hours t1) 60 60) (* (time-minutes t1) 60 ) (time-seconds t1))
+  )
+)
+;TESTS
+(check-expect(time-diff (make-time 12 34 02) (make-time 12 34 04)) 2)
+(check-expect(time-diff (make-time 12 33 02) (make-time 12 34 02)) 60)
+(check-expect(time-diff (make-time 11 34 02) (make-time 12 34 02)) (* 60 60))
+;------------------------------------------------------------------
+
+(define-struct position(x y))
+
+(define-struct circ(center radius))
+
+(define-struct square(upper-left length))
+
+(define-struct rect(upper-left width height))
+
+;CONTRACT
+;(area shape) → number?
+
+;PURPOSE
+;compute the area of a given shape (rectangle, square, or circle)
+
+;DEFINITION
+(define (area shape)
+  (if (square? shape) (* (square-length shape) (square-length shape)) 
+   (if (circ? shape) (* 3.14159265 (* (circ-radius shape) (circ-radius shape)))
+      (* (rect-width shape) (rect-height shape))
+    )
+   )
+  )
+;TESTS:
+(define circle (make-circ 3 3))
+(define sq ( make-square 3 4))
+(define rec( make-rect 3 3 4))
+
+(check-within(area circle) 28.27 .1)
+(check-expect(area sq) 16)
+(check-expect(area rec) 12)
+                                
+;-----------------------------------------------------------------
+
+;CONTRACT
+;(translate-shape shape delta) → (or/c circ? square? rect?)
+
+;PURPOSE
+;produce a shape that's key position is moved in the x direction
+
+;DEFINITION
+;(define (translate-shape shape delta)
+;  (if (square? shape) (make-square (+ (square-upper-left shape) delta) (square-length shape)) 
+;   (if (circ? shape) (make-circ (+ circ-center shape) delta) (circle-radius shape))
+;   ( (make-rect (+ rect-upper-left shape) delta) ( rect-width shape) (rect-height shape) )
+;    )
+;   )
+
+
+;-------------------------------------------------------------------
+
+;CONTRACT
+;(in-shape? shape p) → boolean?
+
+;PURPOSE:
+;find out if a certain shape has the given field
+
+;DEFINITION
+;(define (in-shape? shape p)
+;  (if (square? shape) 
+;   (if (square-p? shape) true false)
+;  (if(circ? shape)
+;     (if (circ-p? shape) true false)
+;   (if (rect? shape)
+;       (if (rect-p? shape) true false)
+;       )
+;     )
+;    )
+;   )

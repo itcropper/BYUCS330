@@ -1,0 +1,249 @@
+Type inference is a characteristic that some languages implement. It allows 
+the programmer from having to explicitly give variables a type associated to 
+its value and leaves its type to be deduced during compilation time or during 
+run time. This style of programming has the reputation of having easier 
+learning curves, followed by much misery and sadness. Since armature 
+programmers don’t have to give types to their variables, many will choose not 
+to worry about it. However, as they get deeper and deeper into the language's 
+complexities, and as their program grows, they will find it harder to manage. 
+Thus, even if dealing with a language that is implemented with type inference, 
+it is still essential to understand what the language does automatically, 
+behind the curtain. Just because a language does not use explicit typing does 
+not mean that any variable can take on any kind of type--which is where 
+perhaps much of the confusion comes from initially. A type inferred language 
+still uses types. In fact, it depends on types, and it is up to the programmer 
+to understand that so that he/she can program properly by being careful as 
+they code.
+
+
+There are different types of typing systems, namely: static typing and dynamic 
+typing. A programming language is said to use static typing if type 
+checking/infering is performed during compile-time.[1] And in contrast, a 
+language is said to use dynamic typing when type checking/infering is 
+performed during run-time That being said, it might be tempting to call all 
+such languages that don't use programmatic explicit typing when declaring 
+variables (like Ruby or Python) dynamically typed languages. That's not to say 
+that they thus don't use type inference, but they are still in actuality 
+considered to be statically typed. This is because during compile time, you 
+can still depend on types of variables. To use an example from Python,
+
+	def isDict(x): 	#returns boolean
+	    return isinstance(x, dict):
+
+we can see that this small program will return true if the incoming parameter 
+is a dictionary of some kind. That distinction, as mentioned before is made 
+during the programs compile time. Even though there is still a large degree of 
+dynamic typing, this would put Python in the category of a statically typed 
+language. Similarly with Ruby, if we have the code
+
+	x.is_a? Integer
+
+the compiler can make the distinction for possible values of x. Other 
+languages have variations of this, but the capability puts them in a different 
+category of typing systems. With the two types in typing systems, static vs. 
+dynamic, you have to wonder, what’s the point of either? Particularly with 
+dynamically typed languages, it's easy to ask "is all of this type inference 
+and confusion worth it?" Well in response, Peter Drayton of Microsoft answers: 
+"Advocates of dynamically typed languages argue that static typing is too 
+rigid, and that the softness of dynamically languages makes them ideally 
+suited for prototyping systems with changing or unknown requirements, or that 
+interact with other systems that change unpredictably (data and application 
+integration). Of course, dynamically typed languages are indispensable for 
+dealing with truly dynamic program behavior such as method interception, 
+dynamic loading, mobile code, runtime reﬂection, etc."[2] He goes on to note 
+that many argue static typing makes code less reusable, in fact NOT more safe, 
+and is more expensive. The issue however, is that the very same argument is 
+being used by those advocating static typing, and the truth is, as John Hughes 
+said, it is not possible to make a language more powerful by omitting features 
+from it.[3] So remember, static vs. dynamic typing does not change a languages 
+ability to compute equally as hard problems. 
+
+One of the significant problems with dynamically typed programming is the fact 
+that is leaves much of the computation to the run-time period. Since I imagine 
+many programmers are of the belief that errors should be found as early in the 
+development process as possible, using dynamically typed languages make this 
+very difficult since it is possible that many errors will not be caught 
+because they were not in the stream of logic created in runtime, or their 
+types were not evaluated at runtime. Because of all of this, it is essential 
+that the programmer not only be careful when creating a program in a 
+dynamically typed language (or uses tools provided when using languages that 
+are only technically statically typed) but that it is thoroughly tested with 
+the program traversing all possible routes of logic. Even though there is a 
+large facet of convenience when programming with a dynamically typed language, 
+there is also a large factor of risk involved. It very well may end up that 
+one spends more time trying to solve a problem or bug in their code totaling 
+more time than it would have taken to write the code in a statically typed 
+language to start with.
+
+In contrast, though it is rarely referred to as 'more convenient' there is a 
+strong case to be made for statically typed languages. Java is a good example 
+of a statically typed language, mostly because it is one of the more familiar 
+languages that use explicit typing, (NOT necessarily because it is the best 
+example of a perfect statically typed language). When creating a program, a 
+programmer needs to explicitly give types to the variables that are being 
+created. Even though JavaScript is not a purely dynamically typed language, it 
+will provide a good contrast in order to demonstrate the differences.
+
+	JavaScript:
+		var results = getResults(x);
+	Java
+		String results = getResults(x);
+
+In the two above cases, it's not hard to see the immediate difference between 
+the two. In JavaScript, the program will compile no matter what getResults(x) 
+returns, and will only error once an operation is called on it that requires a 
+specific type. Java, in contrast states the contract right up front and 
+requires that getResults(x) returns a String. The big difference is that the 
+compiler would not allow getResults(x)'s type to not be a string. That return 
+type would also be explicitly stated, which would assure the compiler of the 
+contract between the variable 'results', and the return value of getResults(x).
+So far, this has seemed like a great solution to that troublesome dynamic 
+programming because if it won't work, the compiler will tell you, hence you 
+have nothing to worry about so long as the program compiles. The truth however 
+is that even in statically typed languages, because of something called 
+unsoundness, you still have to worry about runtime type issues. Let’s change 
+our Java program a little.
+
+	double results = getResults(x, y); 
+	...
+
+	double getResults(double x, double y)
+	{
+		if(x > y){
+			return x * y;
+		}
+		if(x < y){
+			return x / y;
+		}
+		return x;
+	}
+
+To the compiler, this program looks great. [G]etResults(x, y) is contracted to 
+return a double, so the 'results' variable will fulfill its contract and 
+everything will be ok. The problem is however, getResults() doesn't just 
+return a double. It also returns another value of type 'Exception'. In the 
+case where x is less than 0, and y is equal to zero, getResults(x, y) will 
+throw a DivideByZero error. This means our perfect statically typed program is 
+actually wrong so long as certain conditions hold. Some would say that 
+getResults(x, y) rather than returning a double, returns a 'doubleMaybe'[4].  
+Hence, even if a program does not contain any static type-errors, this does 
+not imply that you will not get any unwanted runtime errors. Type-checkers 
+basically only track the types of expressions and make sure that you do not 
+assign a variable with a value of an incompatible type, that the arguments to 
+primitive operations are of the right type (but not that the actual operation 
+succeeds), and that the receiver of a method call can be resolved statically. 
+This would ultimately be impractical for many languages (although there are 
+some that do, and do it well) to enforce that for all possible input values, 
+the appropriate return value will result. This is allowed because again, going 
+back to the balance between convenience and safety, this is an instance where 
+convenience trumps safety. 
+
+The actual process of type inference is closely related to linear algebra. In 
+linear algebra, a system of equations are written as a matrix or matrices, and 
+with a process called Gaussian elimination, one can determine the relationship 
+these equations have to each other and thus determine possible or unique 
+values of the different variables. An example of the process follows.
+
+			| 0   2   1  -8 |                    | 1   0   0   -4 |
+			| 1  -2  -3   0 |         --->       | 0   1   0   -5 |
+			|-1   1   2   3 |                    | 0   0   1    2 |
+
+From these matrices, we can see that through Gaussian elimination, we can 
+solve this system of equations of the form ax + by + cz = d where {x y z} = {-
+4 -5 2}. This is actually a larger idea where we have a list of constraints, 
+and we want to determine what values are possible, if there are any, by 
+manipulating the constraints in ways that allow the system to still match the 
+original constraints, but get us closer to a solution. Just as in Gaussian 
+elimination within linear algebra, there are several different cases possible. 
+A system can be over constrained, under constrained, or uniquely determined. 
+
+An over constrained system yields no solutions. In other words, there is one 
+or more constraints that are in conflict with each other and both or all 
+cannot be true simultaneously. Hence, there is no answer and the type cannot 
+be inferred. An example in code might be the following.
+
+	var x = getAnswer(); //String
+	var results = getResults(x); //double
+	var answer = x + results;
+
+So our constraint list might be:
+
+	[[isFlagged()]] = String
+	[[x]] = [[isFlagged]]
+	[[results]] = [[getResults()]]
+	[[answer]] = num
+	[[answer]] = [[(x + results)]]
+
+This system is over constrained, and we can see that because typeOf (answer) 
+cannot be both a number (as it should be from the + operator if it's 
+contracted to only take two numbers) and the result of (x + results). In this 
+system therefore, there is no way either for the compiler or in run-time, for 
+the type to be inferred. 
+
+Under constrained systems are what you would expect them to be after now 
+knowing over constrained systems. An under constrained system is where there 
+are too few constraints to determine types in that system. Sample code might 
+be the following.
+
+	var x = getAnswer();
+	var y = preparedAnswer(x);
+
+In this case our list of constraints would include the following.
+
+	[[x]] = [[getAnswer()]]
+	[[y]] = [[preparedAnswer(x)]]
+
+This list of constrains makes it impossible to infer any sort of type because 
+there is nothing in this program that allows us to make some sort of guess as 
+to what types are being used. An algebraic example might be trying to solve 
+the equation x + y = 0. All you can infer is that there is a relationship, but 
+you cannot assume specific types. The best that we can do is get an answer in 
+the form of some meta-type variable. This means that x and y are capable of 
+being any type within the allowable types in the language/program. There are 
+two subcases of an under constrained system. The first is having an ambiguous 
+system which can come from overloading in the program, and polymorphic, which 
+obviously comes from the use of polymorphism.
+
+Finally, a uniquely determined system is when there is one unique solution 
+that can be found by using this Gaussian elimination idea. A final example 
+program and constraint list might be the following.
+
+	var x = 1.4;
+	var y = 2.8;
+	var z = x + y;
+
+	[[x]] = double             [[x]] = double     		      [[x]] = double
+	[[y]] = double 	    --->   [[y]] = double  	    --->      [[y]] = double
+	[[z]] = [[x]] + [[y]]      [[z]] = double + double 		  [[z]] = double
+
+In this case there is one solution to this set of constraints, and that is 
+what allows an inferrer to decide on types. So you can see how by having a 
+good understanding of inference, you can change the way that you write code to 
+help the inferrer along in the process and avoid cases where you might have 
+under or over constraints.[5] The problem with this Gaussian elimination idea 
+on this list of constraints is that it is very computationally expensive. The 
+process has a time complexity of n to the third. Even though despite a 
+programmers efforts, he/she likely will not make it theoretically faster, by 
+understanding the process of type inference, you can easily make changes in 
+your program that will help the process's time in practice (if that is an 
+important factor).
+
+Whether you choose to use a dynamically typed language or a statically typed 
+language is entirely arbitrary. Much if not all of it just comes down to 
+personal preference in comparison to the task at hand. Beyond the scope of 
+this paper, arguments have been made to support or degrade both sides. It is 
+very important to remember though, that these two different typing systems are 
+not rigid. A lot of effort has been made to take the advantages of each and 
+bring them together in a hybrid system. Both however are powerful tools: 
+static typing to help programmers express their assumptions about the problem 
+they are trying to solve which allows them to write more concise and correct 
+code, and dynamic typing for dealing with uncertain assumptions about code. 
+Either way though, it is important to understand both, and the process by 
+which type inference works.
+
+[1] http://en.wikipedia.org/wiki/Type_inference
+[2] http://research.microsoft.com/en-us/um/people/emeijer/Papers/RDL04Meijer.
+pdf
+[3] http://comjnl.oxfordjournals.org/content/32/2/98.full.pdf+html
+[4] Jay McCarthy
+[5] http://www.cs.cmu.edu/~rwh/introsml/core/typeinf.htm

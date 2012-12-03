@@ -1,0 +1,122 @@
+;; The first three lines of this file were inserted by DrRacket. They record metadata
+;; about the language level of this file in a form that our tools can easily process.
+#reader(lib "htdp-beginner-reader.ss" "lang")((modname racketbasics) (read-case-sensitive #t) (teachpacks ()) (htdp-settings #(#t constructor repeating-decimal #f #t none #f ())))
+;contract:
+;(sum-coins pennies nickels dimes quarters) → number?
+                                                     
+;Purpose:
+; Adds the VALUES of coins together
+
+;Definition
+(define (sum-coins pennies nickles dimes quarters)
+  (+ (* pennies .01) (* nickles 0.05) (* dimes 0.1) (* quarters 0.25)))
+
+;TESTS:
+(check-expect(sum-coins 1 1 1 1) .41)
+
+;----------------------------------------------------
+;CONTRACT:
+;(area-cylinder base-radius height) → number?
+
+;PURPOSE:
+;Takes the Dimensions of an object and returns the volume
+
+;DEFINITION
+(define (area-cylinder base-radius height)
+  (+ ( * ( * 3.14159265 base-radius base-radius) 2) (* 3.14159265 base-radius 2 height)))
+
+;TESTS:
+(check-within(area-cylinder 4 6) 251.327 .01)
+
+;--------------------------------------------------
+;CONTRACT:
+;(tax gross-pay) → number?
+
+;PURPOSE:
+;take in a number and returns the tax owed based on different amounts
+
+;DEFINITION
+(define (tax gross-pay)
+  (cond 
+    [(<= gross-pay 240) 0]
+    [(and (< 240 gross-pay) ( <= gross-pay 480 )) .15]
+    [else .28]
+    ))
+;TESTS
+(check-expect(tax 0) 0)
+(check-expect(tax 240) 0)
+(check-expect(tax 241) .15)
+(check-expect(tax 480) .15)
+(check-expect(tax 481) .28)
+
+;-------------------------------------------
+;CONTRACT
+;(netpay hours-worked) → number?
+
+;PURPOSE:
+;Determines the net pay of an employee based on hours work and a pay of $12
+
+;DEFINE
+(define (netpay hours-worked)
+  (- (* hours-worked 12) (* (tax(* hours-worked 12)) (* hours-worked 12)))
+  )
+;TESTS
+(check-within(netpay 30) 306 .1)
+(check-within(netpay 40) 408 .1) 
+(check-within(netpay 41) 354.24 .1)
+
+;--------------------------------------------------
+;CONTRACT:
+;(what-kind a b c) → symbol?
+
+;PURPOSE:
+;takes in three numbers and determines hown many roots that quadratic
+;equation would have by producing 'one', 'two', 'none' or 'degenerate'
+
+;DEFINITION:
+(define (what-kind a b c)
+  (cond
+    [(= a 0) "degenerate"]
+    [(> 0 (- (* b b) (* 4 a c))) "none"]
+    [(= (* b b) (* 4 a c)) "one"]
+    [else "two"]))
+
+;TESTS
+(check-expect(what-kind 1 2 1) "one")
+(check-expect(what-kind 2 2 4) "none")
+(check-expect(what-kind 1 3 2) "two")
+
+;-----------------------------------------------------
+;CONTRACT
+;(struct time (hours minutes seconds) #:extra-constructor-name make-time)
+
+;PURPOSE
+;defines points in time since midnight using define-struct
+
+;DEFINITION
+(define-struct timer(hours minutes seconds))
+
+(define make-time(make-timer h m s) )
+
+
+
+;!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+;CONTRACT:
+;(time-diff t1 t2) → number?
+
+;PURPOSE
+;return a number on seconds from a beginning and end time
+
+;DEFINITION
+
+;TESTS
+
+;------------------------------------------------------------------
+
+
+
+    
+                                

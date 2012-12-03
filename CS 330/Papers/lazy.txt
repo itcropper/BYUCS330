@@ -1,0 +1,209 @@
+Lazy programming, and or evaluation, is the process by which evaluations
+are deferred until required. It is often very useful because 
+it allows for computation that in “greedy” or “strict” programming would 
+either take too long, or be incomputable. It particularly is useful for 
+evaluating recursive and potentially infinite functions/data structures. For 
+example, having a function that returns the Nth value of the Fibonacci 
+sequence would be extremely expensive to program using a strict language 
+because it would try and create the Fibonacci sequence up to some arbitrary 
+value. Assigning the same task to a lazy language would be much better because 
+you would be able to create the sequence, and it would not be evaluated until 
+n is defined and given to the function returning the corresponding value from 
+the sequence. In programming, laziness is convenient, in computation, 
+laziness is a virtue.[1]
+
+Some of the issues with lazy evaluation: it is often times difficult to 
+implement efficiently. Memory management is a prime example of this is memory 
+management. There is always a trade off in programming between costs in space 
+versus efficiency. Laziness merges these two into one concept. Having to think 
+about this adds a greater expense to the programmer by them 
+having to spend more time implementing algorithms. It’s magnified since the 
+order of evaluation can be counterintuitive which makes debugging difficult. 
+When stepping through the code, computation would be out of order, and it 
+would be hard to find bugs.[2] Exception handling is also essential to 
+consider with using lazy evaluation. Since expressions aren’t evaluated until 
+the variable it’s bound to is required, a common mistake might be to call 
+a function inside of a Try-Catch  statement, or some other exception handling 
+tool, and the program would crash  if that value wasn’t used until outside of 
+the exception handling. For example, if the following algorithm was 
+implemented in a lazy language:
+
+		String response = “”
+		try
+			response = getTextFromPage(url)
+		catch(Exception e)
+			Throw “error”
+
+		Print response
+
+rather than the exception being caught by the catch statement, the program  
+will crash when getTextFromPage(String) (which might throw a network 
+exception, or timeOut error) is printed since getTextFromPage(url) will not 
+have been evaluated until then. Computationally speaking, however; the more 
+ways you can have the computer avoid doing work, the faster programs will run.
+This is at the heart of what lazy evaluations does and is the reason why lazy 
+evaluation programs potentially run much faster than strictly programed 
+programs. Lazy programs procrastinate computation as long as possible and 
+often times the computer never needs to do the work at all. So for example, 
+where a strict program might open a connection to a file, and read everything 
+upon the program being run, a lazy program might defer that for later, only 
+after a user actually decides to have the program read that file. If you have 
+two programs that run at the same speed, but program two only does half the 
+amount of work, program two will always finish first.
+
+There are several languages which either have laziness built in, and many 
+others with an option to run a program “lazily”. Racket, for example, can 
+explicitly tell the complier to use lazy evaluation, and the compiler will 
+respond by allowing evaluations to be processed as “promises” rather than 
+defined values. The following code returns an error stating that it’s illegal 
+to define something inside of its own definition.
+
+	    #lang plai
+
+	    (define natural-nums
+	        (cons 0 (map add1 natural-nums))
+	    )
+
+In contrast, when the compiler is told to use lazy evaluation, the program 
+compiles and is able to run. When asked to define “natural-nums”, the program 
+will print out a promise. 
+		
+		#lang lazy
+		(define natural-nums
+	        (cons 0 (map add1 natural-nums))
+	    )
+	    > natural-nums
+	    #<promise:natural-nums>
+
+However, when a specific element is required of the list, the lazy program 
+will happily comply showing that the list exists, but just has not been 
+evaluated yet, and it then evaluates the list up to the required value. "Non-
+strict languages provide exactly this kind of demand-driven evaluation. Data 
+structures are evaluated just enough to deliver the answer, and parts of them 
+may not be evaluated at all."[6]
+
+	    > (second natural-nums)
+	    1
+
+In order for a program to be lazy, however; it does not need to have laziness 
+built into the language. Laziness can be implemented in the code itself. In 
+strict languages, like Java, laziness can be explicitly programmed into the 
+code. The strongest example might be the "if else" statement, or other 
+conditionals. Code in a conditional statement has the potential of not being 
+evaluated immediately, or perhaps ever. “Most programming languages offer a 
+form of short-circuited evaluation for the branches of conditional (based on 
+the value of the test expression, only one or the other branch evaluates) and 
+for Boolean connectives (if the ﬁrst branch of a disjunction yields true the 
+second branch need not evaluate, and dually for conjunction).”[3] The 
+following pseudo code shows how a program could be asked to not evaluate an 
+expression until it is explicitly asked for:
+
+		static bool userskedForIt = false
+
+		void initializeTonsOfUselessVaraiblesThatIDontAllNeedRightNow()
+			if(userAskedForIt)
+				Object ob = new Object()
+				ob.doSomethingExpensive()
+			else
+				return
+
+By simply making sure that before computationally expensive tasks are 
+performed, if the programmer uses conditionals to make sure that those tasks 
+are required at that point, the program could potentially save itself from a 
+lot of arduous computation.[4]
+
+Modularity is an important technique to think about when programming with lazy 
+evaluation for several reasons. First, by splitting up your code into smaller 
+methods that do more specific tasks, you increase the possibility that a good 
+portion of that code might never get run; or if nothing else, it will get run 
+at a more appropriate time that won’t affect the user interaction as much. In 
+contrast, a function that doesn't use modularity is much more likely to have 
+computation in it that isn’t required. 
+
+On a spectrum of modularity, laziness helps to get you closer to 100 percent 
+modular than perhaps anything else. An example of something very non modular 
+might be a program that uses only global variables. Halfway might be a program 
+that passes variables from one function to another. When using laziness, 
+however; structures and data are represented in exactly the same way across 
+functions. So if for example you have two functions, one that writes a list, 
+and one that reads a list, those two functions don’t need to interact with 
+each other at all and the program can still run properly. Functions that call 
+one another depend on a certain level of formatting, and one function has to 
+either check to make sure it’s sending in the right way, or check to see if 
+it’s receiving the right way. Laziness standardizes the output and expected 
+input for data and structures.
+
+Another advantage to using modularity with lazy evaluation when programming 
+with lazy evaluation is the greater amount of control it offers. Often times 
+it can act in ways other than what would normally be expected because 
+things are occasionally evaluated out of order. A way to solve this, or at 
+least mitigate the occasional side-effects of lazy evaluation is to make sure 
+that a program is very modular. Modularity inherently makes debugging easier 
+because of its smaller steps between processes. So when using laziness, a 
+procedure that tends to jump around, it makes the process of nailing down 
+errors simpler. Particularly in functional programming, 
+laziness provides a more elegant solution to overly complex problems. "If any 
+part of a program is messy or complicated, the programmer should attempt to 
+modularize it and to generalize the parts. He should expect to use higher-
+order functions and lazy evaluation as his tools for doing this."[5]
+
+This leads us to conclude that in a many cases, the idea of lazy evaluation is
+very powerful. We do have to define that term though. I would define 
+"powerful" as something that expands our capacity of what we can evaluate. 
+That definition gets a little grey since many would argue that any Turing-
+Complete language can accomplish the same task as any other. Lazy evaluation, 
+however, is less of a language and more of a practice that some languages 
+incorporate, and others require explicit coding by developers. And it does 
+allow for more computation. Infinite lists are a perfect example of this. 
+Strict languages cannot do computations on lists of an arbitrary value. They 
+need to be given specific sizes for lists, create that list, and then perform 
+evaluations. Laziness allows for more flexibility in that it won’t get caught 
+in an infinite loop, but rather puts off that evaluation for later. This very 
+practice allows a user to work with computation that isn’t necessarily 
+possible or efficient in strict programming languages. If we have a function 
+that allows a user to get the value at any index, when we use lazy 
+programming, we could simply create an infinite list.
+
+	#lang lazy
+	(define natural-nums
+  		(cons 0 (map add1 natural-nums))
+	)
+
+and whenever we want any value from that list, we can ask the program for the 
+value at that index. In order to get a similar effect with a strict language, 
+we would have to create a function like the following.
+
+	List<T> createListAndGetValue(Integer index)
+		current = 0
+		List<T> list();
+		while(current++ < index)
+			list.append(current)
+		return list
+
+The problem and disadvantage with trying to do a similar thing with strict 
+programming is that every time you want a new list, you have to call 
+createListAndGetValue() and evaluate a new list, which depending on the 
+average length of the returned lists, can become very expensive after multiple 
+calls. By simply using the lazy evaluation version, the data structure is only 
+created once, and once the entries are evaluated, those values are stored in 
+that list, rather than being destroyed and needing reevaluation.
+
+The term laziness is somewhat of buzz-word in programming. A lot of the time, 
+it is being applied to the programmer--the idea that lazy programmers are 
+better because they spend a lot of time trying to make their code as efficient 
+and short as possible. Thus reducing the amount of work they have to do. The 
+same idea can be applied to lazy evaluation, but instead from the computers 
+perspective. It does work storing promises rather than values in hopes that it 
+can avoid a greater deal of work. And because of that aversion towards extra 
+work, the programmers is allowed to deal with structures and recursion that 
+he/she would not have been able to work with otherwise. Not only does 
+laziness allow for more efficiently performing code, but it opens doorways to 
+vaster computation.
+
+[1] http://mindprod.com/jgloss/lazy.html
+[2] http://www.cs.oberlin.edu/~jwalker/bscheme/rationale/lazyEval.html
+[3] http://www.cs.brown.edu/~sk/Publications/Books/ProgLangs/2007-04-26/plai-
+2007-04-26.pdf
+[4] http://en.wikipedia.org/wiki/Lazy_evaluation
+[5] http://standardcode.eu/programming/java/lazy-evaluation-in-java.html
+[6] http://www.haskell.org/haskellwiki/Introduction

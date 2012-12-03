@@ -1,0 +1,251 @@
+;CONTRACT: 
+;(compose-func after:(beta -> gamma) 
+;before:(alpha->beta))->(alpha -> gamma)
+
+;PURPOSE:
+;Returns the composition of before and after.
+
+;DEFINITION:
+(define (compose-func after before)
+  (? (x) (after  (before x)))
+  )
+
+;TESTS
+(define (square x) (* x x))
+
+(define (f x )
+  (+ x 1))
+(define zero (? (x) (* 0 x)))
+(define add (? (x) (+ x x)))
+
+(check-expect((compose-func square f)6) 49)
+(check-expect((compose-func f square) 6)37)
+(check-expect((compose-func f zero) 6) 1 )
+(check-expect((compose-func add add) 5) 20)
+(check-expect((compose-func add square) 0 )0)
+;----------------------------------------------
+
+;CONTRACT: 
+;(flatten lolon:(listof (listof number?)) ? 
+;(listof number?)
+
+;PURPOSE: Produces a list of all the 
+;numbers in the elements of lolon.
+
+;DEFINITION
+(define (flatten lolon)
+ (if (empty? lolon)
+    empty
+    (append (first lolon) (flatten (rest lolon)))
+  )
+ )
+
+;TESTS
+
+(check-expect(flatten (list 
+                       (list 1 2) 
+                       (list 3 4 5) 
+                       (list 6)))
+             (list 1 2 3 4 5 6)
+ )
+(check-expect(flatten (list 
+                       (list 1 2 3 4 5 6) 
+                       (list 3 4 5)))
+             (list 1 2 3 4 5 6 3 4 5))
+
+(check-expect(flatten (list)) (list))
+
+(check-expect(flatten (list 
+                       (list 1 1 ) 
+                       (list 2 3 4 ) 
+                       (list 2 3 4 4))) 
+             (list 1 1 2 3 4 2 3 4 4) )
+
+;(list 1 2 3 4 5 6).
+
+;------------------------------------------------
+
+;CONTRACT:
+;(flatten-foldr lolon:(listof (listof number?)) ? 
+;(listof number?)
+
+;PURPOSE: Produces a list of all the 
+;numbers in the elements of lolon.
+
+;DEFINITION
+(define (flatten-foldr lolon)
+  (foldr append empty lolon)
+  )
+;TESTS
+(define listA(list 
+              (list 1 2) 
+              (list 3 4 5) 
+              (list 6 7) 
+              (list 8 9 10)))
+
+(check-expect(flatten-foldr listA) 
+             (list 1 2 3 4 5 6 7 8 9 10))
+
+(define listB(list 
+              (list 1 2 3) 
+              (list 3 4 5 7) 
+              (list 6 7 8 9) 
+              (list 8 9 10 11 12)
+             ))
+
+(check-expect(flatten-foldr listB)
+       (list 1 2 3 3 4 5 7 6 7 8 9 8 9 10 11 12)
+        )
+
+(check-expect(flatten-foldr (list empty)) (list))
+(check-expect(flatten-foldr empty) empty)
+
+;----------------------------------------------------
+;CONTRACT:(bucket lon) ? (listof (listof number?))
+;PURPOSE: Returns a list of sublists 
+;of adjacent equal numbers.
+
+;DEFINITION:
+(define (bucket lon)
+      (foldr (? (num curList)
+               (cond
+                 [(empty? (first curList))
+                  (cons 
+                   (cons num empty) 
+                   (rest curList))
+                  ]
+                 [(= (first (first curList)) num)
+                  (cons 
+                   (cons num 
+                        (first curList)) 
+                        (rest curList))]
+                 [else
+                  (cons (cons num empty) curList)            
+                  ]
+                 )
+               )
+             (list empty)
+             lon
+             )
+      
+  )
+    
+;TESTS
+(define listo(list 1 1 2 2 2 3 1 1 1 2 3 3))
+(define list2(list 0 0 0 0 0 0 0 0 0 0))
+
+
+
+(define listus (list 
+                (list 1 1) 
+                (list 2 2 2) 
+                (list 3) 
+                (list 1 1 1) 
+                (list 2) 
+                (list 3 3)))
+(check-expect (bucket list2) (list 
+                             (list 0 0 0 0 0 0 0 0 0 0)))
+
+(check-expect (bucket (list empty)) (list (list empty)))
+(check-expect (bucket listo) listus)
+(check-expect (bucket empty) (list empty))
+;---------------------------------------------------------
+
+;CONTRACT: (tree-map f tree) ? 
+;(or/c unknown? person?)
+
+;PURPOSE: Returns a tree where 
+;f has been applied to every person’s name in tree
+
+; Represents an unknown ancestor
+(define-struct unknown())
+
+;represents a person
+(define-struct person
+  (name birthyear eyecolor father mother))
+
+;DEFINITION: 
+(define (tree-map f tree)
+  (cond
+   [(unknown? tree) "unknown"]
+   [else
+    (make-person(f  tree)
+                (person-birthyear tree)
+                (person-eyecolor tree)
+                (tree-map f (person-mother tree))
+                (tree-map f (person-father tree))
+             )
+    ]
+  )
+)
+
+(define whoknows(make-unknown))
+(define maradeth(make-person 
+                 "maradeth" 
+                 1921 
+                 'bl 
+                 (make-unknown) 
+                 (make-unknown)))
+
+(define Wilkens(make-person 
+                "Wilkens"
+                1920 
+                'br 
+                (make-unknown) 
+                (make-unknown)))
+(define jose(make-person 
+             "Jose" 
+             1982 
+             'bl
+             maradeth
+             Wilkens))
+
+(define thePoolGuy(make-person 
+                   "Sergio" 
+                   1984 
+                   'gr 
+                   (make-unknown) 
+                   (make-unknown)))
+(define ben(make-person 
+            "Ben" 
+            2001 
+            'gr 
+            jose 
+            thePoolGuy))
+
+(define (add-cool-suffix peep)
+  (string-append (person-name peep) " The Third")
+  )
+
+;TESTS
+;-----------------------------------------------------
+
+
+(check-expect (tree-map add-cool-suffix maradeth) 
+              (make-person
+               "maradeth The Third" 
+               1921 
+               'bl 
+               "unknown"
+               "unknown"))
+
+(check-expect (tree-map add-cool-suffix jose) 
+              (make-person
+               "Jose The Third"
+               1982
+               'bl
+               (make-person
+                "Wilkens The Third"
+                1920
+                'br
+                "unknown"
+                "unknown")
+               (make-person
+                "maradeth The Third"
+                1921
+                'bl
+                "unknown"
+                "unknown"))
+              )
+ (check-expect (tree-map add-cool-suffix whoknows) "unknown")
+ 

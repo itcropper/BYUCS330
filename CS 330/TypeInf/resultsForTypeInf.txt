@@ -1,0 +1,112 @@
+Welcome to DrRacket, version 5.3 [3m].
+Language: plai; memory limit: 128 MB.
+(bin-num-op #<procedure:+> (with 'x515628 (num 4) (id 'x515628))
+ (with 'x515629 (num 5) (id 'x515629)))
+should look like
+(bin-num-op #<procedure:+> (with 'x424546 (num 4) (id 'x424546))
+ (with 'x424547 (num 5) (id 'x424547)))
+this
+(list (eqc (t-var 'lhs515644) (t-num)) (eqc (t-var 'rhs515645) (t-num)) (eqc (t
+-var 'start) (t-num)) (eqc (t-var 'lhs515644) (t-num)) (eqc (t-var 'rhs515645) 
+(t-num)))
+should look like
+(list
+ (eqc (t-var 'start) (t-num))
+ (eqc (t-var 'left113305) (t-num))
+ (eqc (t-var 'right113306) (t-num))
+ (eqc (t-var 'left113305) (t-num))
+ (eqc (t-var 'right113306) (t-num)))
+"this\n"(list (eqc (t-var 'start) (t-bool)) (eqc (t-var 'iszero515646) (t-num))
+ (eqc (t-var 'iszero515646) (t-num)))
+"should look like this\n"(list (eqc (t-var 'start) (t-bool)) (eqc (t-var 
+'iszero453700) (t-num)) (eqc (t-var 'iszero453700) (t-num)))
+#t
+#t
+#t
+#t
+#t
+#t
+#t
+#t
+#t
+#t
+#t
+this
+(list (eqc (t-var 'exp) (t-num)))
+should look like this
+(list (eqc (t-var 'exp) (t-num)))
+this
+(list (eqc (t-var 'exp) (t-bool)))
+should look like this
+(list (eqc (t-var 'exp) (t-bool)))
+this
+(list (eqc (t-var 'exp) (t-num)) (eqc (t-var 'rhs515677) (t-num)) (eqc (t-var 
+'lhs515676) (t-num)))
+should look like this
+(list (eqc (t-var 'exp) (t-num)) (eqc (t-var 'lhs1) (t-num)) (eqc (t-var 'rhs1)
+ (t-num)))
+this
+(list (eqc (t-var 'exp) (t-num)) (eqc (t-var 'rhs515679) (t-num)) (eqc (t-var 
+'lhs515678) (t-num)))
+should look like this
+(list (eqc (t-var 'exp) (t-num)) (eqc (t-var 'lhs1) (t-num)) (eqc (t-var 'rhs1)
+ (t-num)))
+this
+(list (eqc (t-var 'exp) (t-num)) (eqc (t-var 'rhs515681) (t-num)) (eqc (t-var 
+'lhs515680) (t-num)))
+should look like this
+(list (eqc (t-var 'exp) (t-num)) (eqc (t-var 'lhs1) (t-num)) (eqc (t-var 'rhs1)
+ (t-num)))
+this
+(list (eqc (t-var 'rhs515684) (t-num)) (eqc (t-var 'lhs515683) (t-num)) (eqc (t
+-var 'iszero515682) (t-num)) (eqc (t-var 'exp) (t-bool)))
+should look like this
+(list (eqc (t-var 'exp) (t-bool)) (eqc (t-var 'iszero-exp) (t-num)) (eqc (t-
+var 'lhs) (t-num)) (eqc (t-var 'rhs) (t-num)))
+this
+(list (eqc (t-var 'bif-else515687) (t-bool)) (eqc (t-var 'exp) (t-bool)) (eqc (
+t-var 'bif-then515686) (t-bool)) (eqc (t-var 'bif-test515685) (t-bool)))
+should look like this
+(list
+
+
+ (eqc (t-var 'bif-else480310) (t-bool))
+
+ (eqc (t-var 'bif-then480309) (t-bool))
+ (eqc (t-var 'bif-test480308) (t-bool))
+ (eqc (t-var 'exp) (t-var 'bif-then480309))
+ (eqc (t-var 'bif-then480309) (t-var 'bif-else480310))
+ (eqc (t-var 'bif-test480308) (t-bool)))
+this
+(list
+ (eqc (t-var 'with-body515690) (t-num))
+ (eqc (t-var 'lhs515691) (t-num))
+ (eqc (t-var 'with-bbody515689) (t-num))
+ (eqc (t-var 'x515688) (t-num))
+ (eqc (t-var 'exp) (t-num)))
+should look like this
+(list
+ (eqc (t-var 'lhs482280) (t-num))
+ (eqc (t-var 'with-body482279) (t-num))
+ (eqc (t-var 'x482277) (t-num))
+ (eqc (t-var 'lhs482280) (t-num))
+ (eqc (t-var 'with-bbody482278) (t-num))
+ (eqc (t-var 'x482277) (t-var 'with-bbody482278))
+ (eqc (t-var 'exp) (t-var 'with-body482279)))
+this
+(list
+ (eqc (t-var 'rec-with-body515694) (t-num))
+ (eqc (t-var 'lhs515695) (t-num))
+ (eqc (t-var 'rec-with-bbody515693) (t-num))
+ (eqc (t-var 'x515692) (t-num))
+ (eqc (t-var 'exp) (t-num)))
+should look like this
+(list
+ (eqc (t-var 'lhs484692) (t-num))
+ (eqc (t-var 'rec-with-body484691) (t-num))
+ (eqc (t-var 'x484689) (t-num))
+ (eqc (t-var 'lhs484692) (t-num))
+ (eqc (t-var 'rec-with-bbody484690) (t-num))
+ (eqc (t-var 'x484689) (t-var 'rec-with-bbody484690))
+ (eqc (t-var 'exp) (t-var 'rec-with-body484691)))
+> 

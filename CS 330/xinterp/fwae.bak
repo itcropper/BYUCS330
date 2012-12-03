@@ -1,0 +1,326 @@
+#lang plai
+
+
+(require racket/trace)
+
+
+(define-type Binding
+  [binding (name symbol?) (named-expr CFWAE?)])
+
+(define-type CFWAE
+  [num (n number?)]
+  [binop (op procedure?) (lhs CFWAE?) (rhs CFWAE?)]
+  [with (lob (listof Binding?)) (body CFWAE?)]
+  [id (name symbol?)]
+  [if0 (c CFWAE?) (t CFWAE?) (e CFWAE?)]
+  [fun (args (listof symbol?)) (body CFWAE?)]
+  [app (f CFWAE?) (args (listof CFWAE?))])
+
+
+(define-type Env
+  [mtEnv]
+  [anEnv (name symbol?) (value CFWAE-Value?) (env Env?)])
+
+
+(define-type CFWAE-Value
+  [numV (n number?)]
+  [closureV (params (listof symbol?))
+            (body CFWAE?)
+            (env Env?)])
+;--------------------------------------------------
+
+(define op-table
+  (list (list '+ +)
+        (list '- -)
+        (list '* *)
+        (list '/ /)
+        )
+  )
+
+
+;CONTRACT:(lookup-op op) → (or/c procedure? false/c)
+;  op : symbol?
+
+;PURPOSE:extracts the definition 
+;of an operator or false
+
+;DEFINITION
+(define (lookup-op op)
+  (if(assoc op op-table)
+     (second (assoc op op-table))
+     false)
+  )
+
+;TESTS 
+
+;(test (lookup-op '+) +)
+;(test (lookup-op '-) -)
+;(test (lookup-op '*) *)
+;(test (lookup-op '/) /)
+;(test (lookup-op '$) false)
+;(test (lookup-op '_) false)
+;(test (lookup-op '++) false)
+;(test (lookup-op 1) false)
+
+
+;------------;------------;----------
+;DEFINITION:(parse s-exp) → WAE?
+;s-exp : s-expression?
+
+;PURPOSE:Parses s-exp into a WAE 
+;according to this grammar:
+;  WAE	 	=	 	number
+; 	 	|	 	(+ WAE WAE)
+; 	 	|	 	(- WAE WAE)
+; 	 	|	 	(* WAE WAE)
+; 	 	|	 	(/ WAE WAE)
+; 	 	|	 	(with ([id WAE] ...) WAE)
+; 	 	|	 	id
+
+;DEFINITION:
+(define (parse-binding l)
+  (if (list? l)
+      (if (= 2 (length l))
+          (binding (first l) (parse (second l)))
+          (error "too few arguemnts in binding"))
+      (error "Not a list of bindings")
+      )
+  )
+
+(define (parse sexp)
+  (cond
+    [(number? sexp) (num sexp)]
+    [(symbol? sexp) (id sexp)]
+    [(list? sexp)
+     (cond
+       [(not (equal? 3 (length sexp))) 
+        (error "wrong number of arguements")] 
+       [else
+        (case (first sexp)
+          [(with)
+           (if (list? (second sexp))
+               (with (map parse-binding (second  sexp))
+                     (parse (third sexp)))
+               (error "Not a list of bindings"))]
+          [(id) (sexp)]
+          [else (cond
+                  [(lookup-op (first sexp)) 
+                   (binop (lookup-op (first sexp)) 
+                          (parse (second sexp))
+                          (parse (third sexp)))]
+                  [else (error "unrecognized symbol")]
+                  )]
+          )
+        
+        ]
+       )]
+    [else (error "Illegal syntax")]
+    )
+  )
+
+;TESTS:
+;(test/exn (parse '(-  2)) "wrong number of arguements")
+;(test (parse '5) (num 5))
+;(test/exn (parse true) "Illegal syntax")
+;(test (parse '(* 1 2)) (binop * (num 1) (num 2)))
+;(test/exn (parse '(- 1 2 3)) "wrong number of arguements")
+;(test/exn (parse '(- 1 "fish")) "Illegal syntax")
+;(test/exn (parse '(with [x 1] x)) "Not a list of bindings")
+;(test (parse '5) (num 5))
+
+;(test/exn (parse '(/ 1 "fish"))"Illegal syntax")
+
+;(test/exn (parse +) "Illegal syntax")
+;(test/exn (parse true) "Illegal syntax")
+;(test (parse '(+ 1 2)) (binop + (num 1) (num 2)))
+;(test/exn (parse '(+ 1 2 3)) "wrong number of arguements")
+;(test (parse '(* 3 2)) (binop * (num 3) (num 2)))
+
+#;(test/exn (parse 
+             '(with () (+ x y))) 
+            "Illegal syntax")
+
+#;(test (parse 
+         '(with ({x 5}) ({x 4}) (+ 3 x))
+         "wrong number of arguements"))
+
+;----------------------------------------------------------------------
+
+(define (super-subst bound-list sub-id val)
+  (if (empty? bound-list)
+      empty
+      (cons (binding 
+             (binding-name (first bound-list))  
+             (subst (binding-named-expr (first bound-list)) sub-id val))
+            (super-subst (rest bound-list) sub-id val)
+            )
+      )
+  )
+
+;-------------------------------------------------------------
+
+; subst : WAE symbol number -> WAE
+;Substitutes for all of the bindings 
+;in lob inside body simultaneously.
+
+(define (subst expr sub-id val)
+  (type-case WAE expr
+    [num (n) expr]
+    [binop (op l r) (binop op 
+                           (subst l sub-id val)
+                           (subst r sub-id val))]
+    
+    [with (bound-list bound-body)
+          (if (not 
+               (check-against-rest-of-bindings bound-list sub-id))
+              (with (super-subst bound-list sub-id val)
+                    bound-body) 
+              
+              (with (super-subst bound-list sub-id val)
+                    (subst bound-body sub-id val)))
+          ]
+    
+    [id (v) (if (symbol=? v sub-id) val expr)])
+  )
+
+(define (subst* lob body)
+  (foldr (λ (binding expr) 
+           (subst 
+            expr 
+            (binding-name binding) 
+            (binding-named-expr binding))
+           )
+         body lob)
+  )
+;TESTS
+;(test (subst* 
+;       empty 
+;       (binop + (id 'x) (id 'y))) 
+;      (binop + (id 'x) (id 'y)))
+
+;(test (subst* 
+;       (list (binding 'x (num 1))) 
+;       (id 'x)) 
+;      (num 1))
+
+;(trace subst)
+;(test (subst* (list 
+;               (binding 'x (num 1)) 
+;               (binding 'y (num 2))) 
+;              (binop + (id 'x) (id 'y))) 
+;      (binop + (num 1) (num 2)))
+
+
+;------------------------------------------------------------
+
+;(define (check-against-rest-of-bindings bind-list id) -> bool?
+
+;Purpose: check a full list against an id to check if there is
+; a duplicat binding
+
+(define (check-against-rest-of-bindings bind-list id)
+  (if (empty? bind-list)
+      #t
+      (if (equal? (binding-name (first bind-list)) id)
+          #f
+          (check-against-rest-of-bindings 
+           (rest bind-list) id)
+          )
+      )
+  )
+
+
+;-----------------------------------------------------
+
+
+(define (free-of-duplicate-bindings? bind) 
+  (if (empty? bind)
+      #t
+      (and
+       (check-against-rest-of-bindings 
+        (rest bind) 
+        (binding-name 
+         (first bind)))
+       (free-of-duplicate-bindings? (rest bind))
+       )
+      )
+  )
+
+;(test (free-of-duplicate-bindings?
+;(list (binding 'x (num 4)) 
+;      (binding 'y (num 5)) 
+;      (binding 'z (num 6))))
+;#t)
+
+;(test (free-of-duplicate-bindings?
+;(list (binding 'x (num 4)) 
+;      (binding 'y (num 5)) 
+;      (binding 'x (num 6))))
+;#f)
+
+;--------------------------------------------------
+
+;;CONTRACT: calc : WAE -> number
+;;PURPOSE: evaluates WAE expressions by reducing them to numbers
+
+(define (calc expr)
+  (type-case WAE expr
+    [num (n) n]
+    [binop (op l r) (op (calc l) (calc r))]
+    [with (lob body)
+          (if (free-of-duplicate-bindings? lob)
+              (calc (subst* lob body))
+              (error "duplicate bindings exist"))
+          
+          ]
+    [id (v) (error 'calc "free identifier")])
+  )
+
+
+;TESTS:
+;(test (calc (parse '5)) 5)
+;(test (calc (parse '(+ 4 1))) 5)
+;(trace parse)
+;(trace calc)
+
+;(test (calc (parse 
+;             '(with ([x 5]) 
+;                    x))) 
+;      5)
+
+
+
+(test/exn (calc (parse 'x )) "calc: free identifier")
+
+
+;(test (calc (parse 
+;             '(with ({x 5} {y 5} {z 5}) 
+;                    (+ z (+ x y)))))
+;      15)
+
+;(test/exn (calc (parse 
+;                 '(with ({x 5} {y 5} {z 5}) 
+;                        (+ x y z)))) 
+;          "wrong number of arguements")
+
+(define (calctest stuff other)
+  (test (calc (parse stuff)) other)
+  ) 
+
+;(calctest '(with ([x 2] [y 3]) 
+;                   (with ([y (+ x 3)] [x (+ x 1)]) 
+;                         (+ x y))) 8);
+;
+;(calctest '(with ([x 2] [y 3]) 
+;                   (with ([y (+ x 3)] [x (+ x 1)])
+;                         (with ([x y] [y (* 2 x)])
+;                         (+ x y)))) 11)
+
+#;(calctest '(with ([x 2] [y 3]) 
+                   (with ([y (+ x 3)] [x (+ x 1)]) 
+                         (+ x y))) 8)
+
+#;(calctest  '(with([x 2] [y 3])
+                   (with ([y (with ([x 3]) x)]) 
+                         (with([y (+ y 3)] [x (+ x 1)])
+                              (+ x y)))) 9) 

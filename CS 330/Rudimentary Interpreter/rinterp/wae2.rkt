@@ -1,0 +1,206 @@
+#lang plai
+
+(require racket/trace)
+
+(print-only-errors) 
+
+(define-type Binding
+  [binding (name symbol?) (named-expr WAE?)])
+
+(define-type WAE
+  [num (n number?)]
+  [binop (op procedure?)
+         (lhs WAE?)
+         (rhs WAE?)]
+  [with (lob (listof Binding?)) (body WAE?)]
+  [id (name symbol?)])
+;-------------------------;-------------------------;-------------------------
+
+(define op-table
+  (list (list '+ +)
+        (list '- -)
+        (list '* *)
+        (list '/ /)
+        )
+  )
+
+
+;CONTRACT:(lookup-op op) → (or/c procedure? false/c)
+;  op : symbol?
+
+;PURPOSE:extracts the definition of an operator or false
+
+;DEFINITION
+(define (lookup-op op)
+  (if(assoc op op-table)
+     (second (assoc op op-table))
+     false)
+  )
+
+
+;TESTS
+
+;(test (lookup-op '+) +)
+;(test (lookup-op '-) -)
+;(test (lookup-op '*) *)
+;(test (lookup-op '/) /)
+;(test (lookup-op '$) false)
+;(test (lookup-op '_) false)
+;(test (lookup-op '++) false)
+;(test (lookup-op 1) false)
+
+
+;------------;------------;------------;------------;------------;------------;------------
+;DEFINITION:(parse s-exp) → WAE?
+;s-exp : s-expression?
+
+;PURPOSE:Parses s-exp into a WAE according to this grammar:
+;  WAE	 	=	 	number
+; 	 	|	 	(+ WAE WAE)
+; 	 	|	 	(- WAE WAE)
+; 	 	|	 	(* WAE WAE)
+; 	 	|	 	(/ WAE WAE)
+; 	 	|	 	(with ([id WAE] ...) WAE)
+; 	 	|	 	id
+
+;DEFINITION:
+(define (parse-binding l)
+  (if (list? l)
+      (if (= 2 (length l))
+          (binding (first l) (parse (second l)))
+          (error "too few arguemnts in binding"))
+      (error "Not a list of bindings")
+      )
+  )
+
+(define (parse sexp)
+  (cond
+    [(number? sexp) (num sexp)]
+    [(symbol? sexp) (id sexp)]
+    
+    [(list? sexp)
+     
+     (cond
+       [(< 3 (length sexp)) (error "wrong number of arguements")]
+       [(< (length sexp) 3) (error "wrong number of arguements")]      
+       [else
+        (case (first sexp)
+          
+          
+          [(with)
+           ;[with (lob (listof Binding?)) (body WAE?)]
+           (if (list? (second sexp))
+               (with (map parse-binding (second  sexp))
+                     (parse (third sexp)))
+               (error "Not a list of bindings"))           ]
+          [(id) (sexp)]
+          [else (cond
+                  [(lookup-op (first sexp)) 
+                   (binop (lookup-op (first sexp)) 
+                          (parse (second sexp))
+                          (parse (third sexp)))]
+                  [else (error "unrecognized symbol")]
+                  )]
+          )
+        
+        ]
+       )]
+    [else (error "Illegal syntax")]
+    )
+  )
+
+;TESTS:
+
+(test (parse '5) (num 5))
+(test/exn (parse true) "Illegal syntax")
+(test (parse '(+ 1 2)) (binop + (num 1) (num 2)))
+(test/exn (parse '(+ 1 2 3)) "wrong number of arguements")
+(test/exn (parse '(with [x 1] x)) "Not a list of bindings")
+(test (parse '5) (num 5))
+
+(test/exn (parse +) "Illegal syntax")
+(test/exn (parse true) "Illegal syntax")
+(test (parse '(+ 1 2)) (binop + (num 1) (num 2)))
+(test/exn (parse '(+ 1 2 3)) "wrong number of arguements")
+(test (parse '(* 3 2)) (binop * (num 3) (num 2)))
+
+(test (parse '(with ([x 5] [y 3]) (+ x y))) (with (list (binding 'x (num 5)) (binding 'y (num 3))) (binop + (id 'x) (id 'y))))
+
+(test (parse '(with ({x 5}) x)) (with (list (binding 'x (num 5))) (id 'x)))
+
+;--------------------------------------------------------------------------------------------------------
+
+; subst : WAE symbol number -> WAE
+;Substitutes for all of the bindings in lob inside body simultaneously.
+
+
+(define (subst expr sub-id val)
+  (type-case WAE expr
+    [num (n) expr]
+    [binop (op l r) ( binop op
+                            (subst l sub-id val) 
+                            (subst r sub-id val))]
+    [with (binding bound-body)
+          (if (symbol=? (first binding sub-id))
+              (with (first binding)
+                    (subst (second binding) sub-id val)
+                    bound-body)
+              (with (first binding
+                           (subst (first binding) sub-id val)
+                           (subst bound-body sub-id val))))]
+    [id (v) (if (symbol=? v sub-id) val expr)])
+  )
+
+(define (subst* lob body)
+  (foldr (λ (binding expr) 
+           (subst 
+            expr 
+            (binding-name binding)
+            (binding-named-expr binding)))
+         body lob)
+  )
+;TESTS
+
+(test (subst* (list (binding 'x (num 1))) (id 'x)) (num 1))
+
+;(trace subst)
+(test (subst* (list (binding 'x (num 1)) (binding 'y (num 2))) (binop + (id 'x) (id 'y))) (binop + (num 1) (num 2)))
+
+
+
+;----------------------------------------------------------------------
+
+;;CONTRACT: calc : WAE -> number
+;;PURPOSE: evaluates WAE expressions by reducing them to numbers
+
+(define (has-binding? lob i)
+  (ormap (λ (b) (equal? (binding-name b) i)) lob))
+
+
+(define (validate-bindings lob)
+  (cond
+    [(empty? lob) #f]
+    [else
+     (or (has-binding? (rest lob) (binding-name (first lob)))
+         (validate-bindings (rest lob)))]
+    ))
+
+(define (calc expr)
+  (type-case WAE expr
+    [num (n) n]
+    [binop (op l r) (op (calc l) (calc r))]
+    [with (bind body)
+          (if (validate-bindings bind) 
+              (calc (subst* body
+                            binding-name bind
+                            num (calc (binding-named-expr bind))))
+              (error "Invalid bindings"))]
+    [id (v) (error 'calc "free identifier")])
+  )
+
+
+;TESTS:
+(test (calc (parse '5)) 5)
+(test (calc (parse '(+ 4 1))) 5)
+;(calc (parse '(with ({x 5} {y 5}) (+ x y))))
+

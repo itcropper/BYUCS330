@@ -1,0 +1,6 @@
+#lang plai/mutator
+
+(allocator-setup "garbageCollector.rkt" 20)
+
+
+(define a (cons 1(cons 2(cons 3 empty))))
